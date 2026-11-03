@@ -1,77 +1,146 @@
-import { BOARD_COLUMNS, BOARD_ROWS } from './board.js?v=6';
+import { BOARD_COLUMNS, BOARD_ROWS, connectedIds, moveBlocks, resolveBoard } from './board.js?v=8';
 
-const EPSILON = 1e-7;
+const EPS = 1e-7;
+export const DEFAULT_STUDS = { height: 0.12, maxWidth: 0.32, inset: 0.04 };
+const overlap = (a0, a1, b0, b1) => a0 < b1 - EPS && a1 > b0 + EPS;
 
-// Fractional coordinates are only used while dragging; committed blocks stay on the grid.
+// Stud geometry matches the per-cell centred studs used by the renderer.
+function shapes(block, dx, dy, studs) {
+  const x = block.x + dx, y = block.y + dy;
+  const result = [{ left: x, right: x + block.length, top: y, bottom: y + 1, kind: 'body' }];
+  if (studs.height <= 0) return result;
+  const innerWidth = Math.max(0, block.length - 2 * studs.inset);
+  const step = innerWidth / block.length;
+  const width = Math.min(studs.maxWidth, step * 0.39);
+  for (let i = 0; i < block.length; i++) {
+    const center = x + studs.inset + (i + 0.5) * step;
+    result.push({ left: center - width / 2, right: center + width / 2, top: y - studs.height, bottom: y, kind: 'stud' });
+  }
+  return result;
+}
+
+// Body-only occupancy is used for grid placement: studs may be inserted into a
+// vertically adjacent brick at rest, but solid brick bodies cannot overlap.
 export function canPreview(blocks, ids, dx, dy) {
-  const moving = blocks.filter(block => ids.has(block.id));
-  const fixed = blocks.filter(block => !ids.has(block.id));
-  return moving.every(block => {
-    const left = block.x + dx, top = block.y + dy;
-    if (left < -EPSILON || left + block.length > BOARD_COLUMNS + EPSILON || top < -EPSILON || top + 1 > BOARD_ROWS + EPSILON) return false;
-    return fixed.every(other =>
-      left + block.length <= other.x + EPSILON || left >= other.x + other.length - EPSILON ||
-      top + 1 <= other.y + EPSILON || top >= other.y + 1 - EPSILON
-    );
+  const moving = blocks.filter(b => ids.has(b.id)), fixed = blocks.filter(b => !ids.has(b.id));
+  return moving.every(b => {
+    const x = b.x + dx, y = b.y + dy;
+    return x >= -EPS && x + b.length <= BOARD_COLUMNS + EPS && y >= -EPS && y + 1 <= BOARD_ROWS + EPS &&
+      fixed.every(o => !overlap(x, x + b.length, o.x, o.x + o.length) || !overlap(y, y + 1, o.y, o.y + 1));
   });
 }
 
-// Sweep along an axis so even a fast pointer cannot move through a brick or a wall.
-export function sweepAxis(blocks, ids, position, axis, target) {
-  const current = position[axis];
-  const requested = target - current;
-  if (Math.abs(requested) < EPSILON) return current;
-  const moving = blocks.filter(block => ids.has(block.id));
-  const fixed = blocks.filter(block => !ids.has(block.id));
+// Axis-aligned swept collision against bodies and protruding studs. Existing
+// interlocked studs may move vertically out of their socket, never sideways.
+export function sweepAxis(blocks, ids, position, axis, target, studs = DEFAULT_STUDS, bodiesOnly = false) {
+  const requested = target - position[axis];
+  if (Math.abs(requested) < EPS) return position[axis];
   let distance = requested;
-  for (const block of moving) {
-    const left = block.x + position.x, right = left + block.length;
-    const top = block.y + position.y, bottom = top + 1;
-    const edgeDistance = axis === 'x'
-      ? (requested > 0 ? BOARD_COLUMNS - right : -left)
-      : (requested > 0 ? BOARD_ROWS - bottom : -top);
-    distance = requested > 0 ? Math.min(distance, edgeDistance) : Math.max(distance, edgeDistance);
+  const fixed = blocks.filter(b => !ids.has(b.id));
+  for (const b of blocks.filter(b => ids.has(b.id))) {
+    const x = b.x + position.x, y = b.y + position.y;
+    const edge = axis === 'x' ? (requested > 0 ? BOARD_COLUMNS - x - b.length : -x) : (requested > 0 ? BOARD_ROWS - y - 1 : -y);
+    distance = requested > 0 ? Math.min(distance, edge) : Math.max(distance, edge);
+    const movingShapes = shapes(b, position.x, position.y, bodiesOnly ? { ...studs, height: 0 } : studs);
     for (const other of fixed) {
-      const overlap = axis === 'x'
-        ? top < other.y + 1 - EPSILON && bottom > other.y + EPSILON
-        : left < other.x + other.length - EPSILON && right > other.x + EPSILON;
-      if (!overlap) continue;
-      const gap = axis === 'x'
-        ? (requested > 0 ? other.x - right : other.x + other.length - left)
-        : (requested > 0 ? other.y - bottom : other.y + 1 - top);
-      if (requested > 0 && gap >= -EPSILON) distance = Math.min(distance, Math.max(0, gap));
-      if (requested < 0 && gap <= EPSILON) distance = Math.max(distance, Math.min(0, gap));
+      const fixedShapes = shapes(other, 0, 0, bodiesOnly ? { ...studs, height: 0 } : studs);
+      for (const m of movingShapes) for (const f of fixedShapes) {
+        const perpendicular = axis === 'x' ? overlap(m.top, m.bottom, f.top, f.bottom) : overlap(m.left, m.right, f.left, f.right);
+        if (!perpendicular) continue;
+        const m0 = axis === 'x' ? m.left : m.top, m1 = axis === 'x' ? m.right : m.bottom;
+        const f0 = axis === 'x' ? f.left : f.top, f1 = axis === 'x' ? f.right : f.bottom;
+        if (overlap(m0, m1, f0, f1)) {
+          // Only already-engaged studs can overlap at the start. Allow vertical
+          // separation, but do not allow horizontal sliding through the joint.
+          const separating = axis === 'y' && ((m.kind === 'body' && f.kind === 'stud' && requested < 0) || (m.kind === 'stud' && f.kind === 'body' && requested > 0));
+          if (!separating) distance = 0;
+          continue;
+        }
+        const gap = requested > 0 ? f0 - m1 : f1 - m0;
+        if (requested > 0 && gap >= -EPS) distance = Math.min(distance, Math.max(0, gap));
+        if (requested < 0 && gap <= EPS) distance = Math.max(distance, Math.min(0, gap));
+      }
     }
   }
-  return current + distance;
+  return position[axis] + distance;
 }
 
-// Lift first, then shift, then lower. Sideways movement becomes available as
-// soon as the visible studs clear the connection, not after a whole cell.
-export function dragPosition(blocks, ids, position, target, liftHeight) {
+export function dragPosition(blocks, ids, position, target, studs = DEFAULT_STUDS) {
   const next = { ...position };
-  if (target.y < next.y) next.y = sweepAxis(blocks, ids, next, 'y', target.y);
-  if (next.y <= -liftHeight + EPSILON) next.x = sweepAxis(blocks, ids, next, 'x', target.x);
-  if (target.y > next.y) next.y = sweepAxis(blocks, ids, next, 'y', target.y);
+  if (target.y < next.y) next.y = sweepAxis(blocks, ids, next, 'y', target.y, studs);
+  next.x = sweepAxis(blocks, ids, next, 'x', target.x, studs);
+  next.y = sweepAxis(blocks, ids, next, 'y', target.y, studs);
+
+  // A one-cell opening requires exact alignment in the physics model. Guide a
+  // nearby ghost to the grid centre only when doing so is collision-free and
+  // actually lets it travel farther in the requested vertical direction.
+  if (Math.abs(target.y - next.y) > EPS) {
+    const alignedX = Math.round(next.x);
+    if (Math.abs(alignedX - next.x) <= 0.4 + EPS) {
+      const reachedX = sweepAxis(blocks, ids, next, 'x', alignedX, studs);
+      if (Math.abs(reachedX - alignedX) < EPS) {
+        const aligned = { x: alignedX, y: next.y };
+        const reachedY = sweepAxis(blocks, ids, aligned, 'y', target.y, studs);
+        if (Math.abs(target.y - reachedY) + EPS < Math.abs(target.y - next.y)) {
+          return { x: alignedX, y: reachedY };
+        }
+      }
+    }
+  }
+  // A vertical movement can also free the studs for a sideways movement in
+  // this same pointer event; never bypass the normal swept collision checks.
+  next.x = sweepAxis(blocks, ids, next, 'x', target.x, studs);
   return next;
 }
 
-// Pick the nearest legal grid position that is reachable from the preview by
-// an unobstructed horizontal/vertical path. Never snap through another block.
-export function snapOffset(blocks, ids, position) {
-  const candidates = [];
-  for (let dy = -BOARD_ROWS; dy <= BOARD_ROWS; dy++) {
-    for (let dx = -BOARD_COLUMNS; dx <= BOARD_COLUMNS; dx++) {
-      if (canPreview(blocks, ids, dx, dy)) candidates.push({ x: dx, y: dy });
+// A final vertical insertion of at most one stud height may engage a socket.
+function travelTo(blocks, ids, start, candidate, axes, studs) {
+  const path = { ...start };
+  for (const axis of axes) {
+    const dest = candidate[axis];
+    let actual = sweepAxis(blocks, ids, path, axis, dest, studs);
+    if (axis === 'y' && Math.abs(actual - dest) <= studs.height + EPS) {
+      const bodyEnd = sweepAxis(blocks, ids, path, axis, dest, studs, true);
+      if (Math.abs(bodyEnd - dest) < EPS) actual = dest;
     }
+    path[axis] = actual;
+    if (Math.abs(actual - dest) > EPS) return false;
+  }
+  return true;
+}
+
+export function snapOffset(blocks, ids, position, studs = DEFAULT_STUDS) {
+  const candidates = [];
+  for (let y = -BOARD_ROWS; y <= BOARD_ROWS; y++) for (let x = -BOARD_COLUMNS; x <= BOARD_COLUMNS; x++) {
+    if (canPreview(blocks, ids, x, y)) candidates.push({ x, y });
   }
   candidates.sort((a, b) => (a.x - position.x) ** 2 + (a.y - position.y) ** 2 - ((b.x - position.x) ** 2 + (b.y - position.y) ** 2));
-  for (const candidate of candidates) {
-    for (const axes of [['x', 'y'], ['y', 'x']]) {
-      const path = { ...position };
-      for (const axis of axes) path[axis] = sweepAxis(blocks, ids, path, axis, candidate[axis]);
-      if (Math.abs(path.x - candidate.x) < EPSILON && Math.abs(path.y - candidate.y) < EPSILON) return candidate;
+  return candidates.find(candidate => travelTo(blocks, ids, position, candidate, ['x', 'y'], studs) || travelTo(blocks, ids, position, candidate, ['y', 'x'], studs)) ?? null;
+}
+
+// Search reachable placements, including extraction downwards and sideways in
+// open space. Uses the same stud collisions as pointer dragging.
+export function hasMove(blocks, mode, studs = DEFAULT_STUDS) {
+  const groups = new Set();
+  for (const block of blocks) {
+    const ids = connectedIds(blocks, block.id, mode);
+    const key = [...ids].sort((a, b) => a - b).join(',');
+    if (groups.has(key)) continue;
+    groups.add(key);
+    const queue = [{ x: 0, y: 0 }], visited = new Set(['0,0']);
+    for (let i = 0; i < queue.length; i++) {
+      const pos = queue[i];
+      if (pos.x || pos.y) {
+        const result = resolveBoard(moveBlocks(blocks, ids, pos.x, pos.y));
+        if (result.lines || result.blocks.some((b, n) => b.x !== blocks[n].x || b.y !== blocks[n].y)) return true;
+      }
+      for (const [dx, dy] of [[0, -1], [0, 1], [-1, 0], [1, 0]]) {
+        const next = { x: pos.x + dx, y: pos.y + dy }, k = `${next.x},${next.y}`;
+        if (!visited.has(k) && canPreview(blocks, ids, next.x, next.y) && travelTo(blocks, ids, pos, next, dx ? ['x'] : ['y'], studs)) {
+          visited.add(k); queue.push(next);
+        }
+      }
     }
   }
-  return null;
+  return false;
 }

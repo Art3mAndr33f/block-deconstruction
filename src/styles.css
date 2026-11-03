@@ -39,3 +39,37 @@ body.expanded-mode{min-height:100vh;background:var(--bg)}
 .sidebar .auto-row{display:flex;align-items:flex-start;gap:8px;margin:19px 0 4px;font-weight:600;line-height:1.45;cursor:pointer}
 .auto-row input{accent-color:#cddd90;margin:1px 0 0;flex:none}
 @media(max-width:650px){.board{--stud-height:4px}.sidebar .auto-row{margin:12px 0 4px}}
+/* Studs share the same cell-centred geometry as collision detection. */
+.board{--stud-max-width:16px;--brick-inset:3px}
+.brick-inner{display:grid;grid-template-columns:repeat(var(--brick-length),minmax(0,1fr));align-items:start}
+.stud{justify-self:center;width:39%;max-width:var(--stud-max-width)}
+.studs-center .stud{align-self:center}
+@media(max-width:650px){.board{--stud-max-width:8px;--brick-inset:2px}}
+.burn-line{position:absolute;left:0;width:100%;z-index:60;pointer-events:none;background:linear-gradient(90deg,transparent,#f4d77c99 20%,#fff9c9dd 50%,#f2a964aa 80%,transparent);box-shadow:0 0 20px #ffcd78aa;animation:burn-line 850ms ease-in forwards}
+.clearing .brick-inner{animation:burn-brick 850ms ease-in forwards}
+@keyframes burn-line{0%{opacity:.3;transform:scaleX(.7)}45%{opacity:1;transform:scaleX(1)}100%{opacity:0;filter:blur(3px)}}
+@keyframes burn-brick{0%{filter:brightness(1)}40%{filter:brightness(2);box-shadow:0 0 18px #ffc970}100%{filter:brightness(1.6);opacity:0;transform:scale(.9)}}
+.mode-link{color:#cbdba4;text-decoration:none;font-size:11px;white-space:nowrap}.mode-link:hover{text-decoration:underline}
+#fall-speed{width:100%;accent-color:#cddd90}.game-menu{border-top:1px solid var(--line);margin-top:22px;padding-top:18px}.game-menu .reset{margin-top:14px}.quote-card{margin-top:16px;padding:16px;background:#303c2f;border-left:2px solid var(--lime)}.quote-card[hidden]{display:none}.quote-card blockquote{margin:0 0 10px;font:16px/1.5 Georgia,serif}.quote-card cite{display:block;font:normal 10px/1.4 Arial,sans-serif;color:#b4c4aa}.quote-card button{padding:0;border:0;background:none;color:var(--lime);font-size:11px;margin-top:12px}
+/* The player version keeps the board and a small side menu; the prototype remains available separately. */
+.play-mode .intro,.play-mode footer,.play-mode .prototype-controls,.play-mode .future,.play-mode .board-bottom,.play-mode .under-board{display:none}
+.play-mode .shell{max-width:1250px}.play-mode .layout{display:grid;grid-template-columns:minmax(0,min(60vh,510px)) minmax(170px,230px);justify-content:center;align-items:start;gap:32px;padding:30px 0}
+.play-mode .play{grid-column:1;min-width:0;width:100%}.play-mode .sidebar{display:block;grid-column:2;margin-top:57px;padding:20px}.play-mode .game-menu{border:0;margin:0;padding:0}.play-mode .message{min-height:35px}.play-mode .move-controls:not(.active){display:none}
+@media(max-width:650px){.mode-link{font-size:10px}.play-mode .shell{padding:0 14px}.play-mode .topbar{height:54px}.play-mode .layout{grid-template-columns:minmax(0,1fr);gap:12px;padding:14px 0}.play-mode .play{grid-column:1;width:min(100%,calc((100dvh - 185px) * .8));min-width:min(100%,240px);justify-self:center}.play-mode .sidebar{grid-column:1;width:min(100%,420px);justify-self:center;margin:0;padding:12px}.play-mode .game-menu .reset{margin:8px 14px 0 0}.play-mode .game-menu .quote-setting{display:inline-flex;margin:8px 0 0}.play-mode .game-menu>.hint{display:none}.play-mode .heading{height:43px}.play-mode .message{min-height:28px;padding-top:6px}.play-mode .board-frame{padding:7px}}
+@media(prefers-reduced-motion:reduce){.burn-line,.clearing .brick-inner{animation-duration:.01ms!important}}
+/* In the alternate circular style the functional upper studs remain visible. */
+.studs-center .brick-inner::before{content:"";position:absolute;left:0;right:0;top:calc(-1 * var(--stud-height));height:var(--stud-height);background-image:linear-gradient(to right,transparent calc(50% - min(19.5%,8px)),var(--stud-color) 0 calc(50% + min(19.5%,8px)),transparent 0);background-size:calc(100% / var(--brick-length)) 100%;background-repeat:repeat-x}
+@media(max-width:650px){.studs-center .brick-inner::before{background-image:linear-gradient(to right,transparent calc(50% - min(19.5%,4px)),var(--stud-color) 0 calc(50% + min(19.5%,4px)),transparent 0)}}
+
+/* The player can recognise a completed row before the burn begins. */
+#burn-duration{width:100%;accent-color:#cddd90}
+.burn-line{animation:none;opacity:.55}
+.clearing .brick-inner{animation:none;outline:2px solid #fff1b4;box-shadow:0 0 12px #ffc970}
+.board.is-burning .burn-line{animation:burn-line var(--burn-duration,1200ms) ease-in forwards}
+.board.is-burning .clearing .brick-inner{animation:burn-brick var(--burn-duration,1200ms) ease-in forwards}
+@media(prefers-reduced-motion:reduce){
+  .board.is-burning .burn-line,.board.is-burning .clearing .brick-inner{animation:none;opacity:1}
+}
+/* Avoid animating blur, brightness and shadows: they can cause costly repaints. */
+@keyframes burn-line{0%{opacity:.35;transform:scaleX(.8)}35%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(1)}}
+@keyframes burn-brick{0%,35%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.9)}}
