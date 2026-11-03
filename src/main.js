@@ -1,12 +1,34 @@
-import { BOARD_COLUMNS, BOARD_ROWS, addRow, canGenerate, canMove, connectedIds, hasMove, makeRow, moveBlocks, resolveBoard } from './board.js?v=6';
-import { createFullscreenController } from './fullscreen.js?v=6';
-import { dragPosition, snapOffset } from './drag.js?v=6';
-import { collectFallFrames, fallKeyframes } from './motion.js?v=6';
+import { BOARD_COLUMNS, BOARD_ROWS, addRow, canGenerate, canMove, connectedIds, isMoveGameOver, makeRow, moveBlocks, resolveBoard } from './board.js?v=7';
+import { createFullscreenController } from './fullscreen.js?v=7';
+import { dragPosition, snapOffset, hasMove, sweepAxis } from './drag.js?v=7';
+import { collectFallFrames, fallKeyframes } from './motion.js?v=7';
 
 const $ = selector => document.querySelector(selector);
 const boardEl = $('#board'), messageEl = $('#message');
 const strips = { top: $('#next-top'), bottom: $('#next-bottom') };
 const bondEl = $('#bond'), directionEl = $('#direction'), autoRowEl = $('#auto-row');
+const prototype = new URLSearchParams(location.search).get('mode') === 'prototype';
+document.body.classList.toggle('play-mode', !prototype);
+if (!prototype) { bondEl.value = 'above'; directionEl.value = 'random'; autoRowEl.checked = true; }
+$('#mode-link').href = prototype ? location.pathname : '?mode=prototype';
+$('#mode-link').textContent = prototype ? 'Играть ↗' : 'Прототип ↗';
+const quotes = [
+  { text: 'Знающий других мудр; знающий себя просветлён.', source: 'Дао дэ цзин, глава 33 · вольный перевод' },
+  { text: 'Путь в тысячу ли начинается с первого шага.', source: 'Дао дэ цзин, глава 64 · вольный перевод' },
+  { text: 'Кто умеет довольствоваться, тот богат.', source: 'Дао дэ цзин, глава 33 · вольный перевод' },
+];
+function showQuote() {
+  if (!$('#quotes').checked) return;
+  const quote = quotes[Math.floor(Math.random() * quotes.length)];
+  $('#quote-text').textContent = quote.text; $('#quote-source').textContent = quote.source; $('#quote').hidden = false;
+}
+function geometry() {
+  const style = getComputedStyle(boardEl), rect = boardEl.getBoundingClientRect();
+  const w = rect.width / BOARD_COLUMNS || 50, h = rect.height / BOARD_ROWS || 50;
+  return { height: (parseFloat(style.getPropertyValue('--stud-height')) || 6) / h,
+    maxWidth: (parseFloat(style.getPropertyValue('--stud-max-width')) || 16) / w,
+    inset: (parseFloat(style.getPropertyValue('--brick-inset')) || 3) / w };
+}
 let blocks, next, nextId, score, lines, selection, gameOver, pointer;
 let busy = false, epoch = 0, clearRows = [];
 const lengthInputs = [...document.querySelectorAll('.length-options input')];
@@ -24,14 +46,15 @@ function say(text, error = false) {
 function newGame() {
   epoch++; busy = false; clearRows = [];
   blocks = []; nextId = 1; score = 0; lines = 0; selection = null; gameOver = false; pointer = null;
-  next = makeNext();
+  next = makeNext(); $('#quote').hidden = true;
   generate(true);
 }
-function checkGameOver() {
-  gameOver = !canGenerate(blocks, next.direction) && !hasMove(blocks, bondEl.value);
+function checkGameOver({ afterMove = false, wasFullHeight = false } = {}) {
+  const blocked = !canGenerate(blocks, next.direction);
+  gameOver = (afterMove && isMoveGameOver(blocks, wasFullHeight, autoRowEl.checked)) || (blocked && !hasMove(blocks, bondEl.value, geometry()));
   if (gameOver) say(`Игра окончена. Счёт: ${score}. Начните заново, чтобы попробовать ещё раз.`, true);
 }
-async function animateResolution(initialMessage, { fromGhost = false } = {}) {
+async function animateResolution(initialMessage, { fromGhost = false, afterMove = false, wasFullHeight = false } = {}) {
   const action = ++epoch;
   busy = true;
   const baseScore = score, baseLines = lines;
@@ -48,7 +71,7 @@ async function animateResolution(initialMessage, { fromGhost = false } = {}) {
       i = nextIndex - 1;
       blocks = positions.at(-1); clearRows = [];
       say('Конструкции падают одновременно.');
-      const duration = (positions.length - 1) * 200;
+      const duration = (positions.length - 1) * (1000 / Number($('#fall-speed').value));
       render({ fallFrames: positions, duration });
       await pause(duration);
     } else {
@@ -56,7 +79,7 @@ async function animateResolution(initialMessage, { fromGhost = false } = {}) {
       score = baseScore + frame.score; lines = baseLines + frame.lines;
       if (frame.type === 'clear') say(`Линия заполнена! ${frame.combo > 1 ? `Комбо ×${frame.combo}` : 'Освобождаем пространство.'}`);
       render();
-      await pause(frame.type === 'clear' ? 450 : 120);
+      await pause(frame.type === 'clear' ? 320 : 120);
     }
     if (action !== epoch) return false;
   }
@@ -64,7 +87,8 @@ async function animateResolution(initialMessage, { fromGhost = false } = {}) {
   busy = false;
   if (result.lines) say(`Линии: ${result.lines} · +${result.score} очков${result.combo > 1 ? ` · комбо ×${result.combo}` : ''}`);
   else say(initialMessage);
-  checkGameOver(); render();
+  if (result.combo > 1 || result.lines > 1) showQuote();
+  checkGameOver({ afterMove, wasFullHeight }); render();
   return true;
 }
 function generate(initial = false) {
@@ -78,14 +102,17 @@ function generate(initial = false) {
 function select(id) {
   if (gameOver || busy) return;
   selection = { ids: connectedIds(blocks, id, bondEl.value), dx: 0, dy: 0, visual: null };
-  say('Приподнимите конструкцию, затем двигайте в сторону.');
+  say('Разъедините выступы и переместите конструкцию.');
   render();
 }
 function step(dx, dy) {
   if (!selection || gameOver || busy) return false;
   const x = selection.dx + dx, y = selection.dy + dy;
-  if (dx && selection.dy >= 0) { say('Сначала приподнимите конструкцию выше исходной позиции.', true); flashInvalid(); return false; }
-  if (!canMove(blocks, selection.ids, x, y)) { say('Здесь мешают край поля или другой блок.', true); flashInvalid(); return false; }
+  const studs = geometry(), pos = { x: selection.dx, y: selection.dy };
+  const axis = dx ? 'x' : 'y';
+  const reached = sweepAxis(blocks, selection.ids, pos, axis, axis === 'x' ? x : y, studs);
+  const engaged = !dx && Math.abs(reached - y) <= studs.height + 1e-7 && Math.abs(sweepAxis(blocks, selection.ids, pos, axis, y, studs, true) - y) < 1e-7;
+  if ((!engaged && Math.abs(reached - (dx ? x : y)) > 1e-7) || !canMove(blocks, selection.ids, x, y)) { say('Здесь мешают край поля или другой блок.', true); flashInvalid(); return false; }
   selection.dx = x; selection.dy = y; selection.visual = null;
   say('Серый призрак показывает положение. Отпустите или нажмите «Разместить».'); render();
   return true;
@@ -96,9 +123,10 @@ function flashInvalid() {
 async function place() {
   if (!selection || busy) return;
   if (!selection.dx && !selection.dy) { selection = null; say('Ход отменён.'); render(); return; }
+  const wasFullHeight = !canGenerate(blocks, next.direction);
   blocks = moveBlocks(blocks, selection.ids, selection.dx, selection.dy);
   selection = null;
-  const completed = await animateResolution('Конструкция размещена.', { fromGhost: true });
+  const completed = await animateResolution('Конструкция размещена.', { fromGhost: true, afterMove: true, wasFullHeight });
   if (completed && autoRowEl.checked && !gameOver) generate();
 }
 function cancel() { selection = null; say('Ход отменён. Выберите блок.'); render(); }
@@ -117,7 +145,7 @@ function brick(block, ghost = false) {
   el.style.zIndex = ghost ? '50' : String(block.y + 1);
   if (!ghost && selection?.ids.has(block.id)) el.classList.add('selected');
   if (!ghost && clearRows.includes(block.y)) el.classList.add('clearing');
-  const inside = document.createElement('span'); inside.className = 'brick-inner';
+  const inside = document.createElement('span'); inside.className = 'brick-inner'; inside.style.setProperty('--brick-length', block.length);
   for (let i = 0; i < block.length; i++) { const stud = document.createElement('i'); stud.className = 'stud'; inside.append(stud); }
   el.append(inside); position(el, block, ghost ? (selection.visual?.x ?? selection.dx) : 0, ghost ? (selection.visual?.y ?? selection.dy) : 0);
   return el;
@@ -131,6 +159,7 @@ function render({ fromGhost = false, fallFrames = null, duration = 220 } = {}) {
   const grid = document.createElement('div'); grid.className = 'grid-bg'; grid.setAttribute('aria-hidden', 'true');
   for (let i = 0; i < BOARD_ROWS * BOARD_COLUMNS; i++) { const cell = document.createElement('div'); cell.className = `cell${clearRows.includes(Math.floor(i / BOARD_COLUMNS)) ? ' clear-cell' : ''}`; grid.append(cell); }
   boardEl.append(grid);
+  for (const y of clearRows) { const flame = document.createElement('div'); flame.className = 'burn-line'; flame.setAttribute('aria-hidden', 'true'); flame.style.top = `${y / BOARD_ROWS * 100}%`; flame.style.height = `${100 / BOARD_ROWS}%`; boardEl.append(flame); }
   for (const block of blocks) boardEl.append(brick(block));
   if (selection) for (const block of blocks.filter(b => selection.ids.has(b.id))) boardEl.append(brick(block, true));
   if (focusedId) boardEl.querySelector(`button[data-id="${focusedId}"]`)?.focus({ preventScroll: true });
@@ -174,9 +203,10 @@ function render({ fromGhost = false, fallFrames = null, duration = 220 } = {}) {
   $('#next-direction').textContent = `Следующий ряд — ${next.direction === 'top' ? 'сверху ↓' : 'снизу ↑'}`;
   $('#score').textContent = score; $('#lines').textContent = `ЛИНИЙ: ${lines}`;
   $('#board-status').textContent = gameOver ? 'ИГРА ОКОНЧЕНА' : busy ? 'ДВИЖЕНИЕ' : selection ? 'КОНСТРУКЦИЯ ВЫБРАНА' : 'ВЫБЕРИТЕ БЛОК';
+  $('.move-controls').classList.toggle('active', !!selection && !busy);
   $('#generate').disabled = gameOver || !!selection || busy;
   document.querySelectorAll('#place, #cancel').forEach(el => el.disabled = !selection || gameOver || busy);
-  [bondEl, directionEl, autoRowEl, $('#stud-style'), ...lengthInputs].forEach(el => el.disabled = busy);
+  [bondEl, directionEl, autoRowEl, $('#stud-style'), $('#fall-speed'), ...lengthInputs].forEach(el => el.disabled = busy);
   if (!busy && allowedLengths().length === 1) lengthInputs.find(input => input.checked).disabled = true;
 }
 boardEl.addEventListener('pointerdown', event => {
@@ -191,10 +221,9 @@ window.addEventListener('pointermove', event => {
   const rect = boardEl.getBoundingClientRect(), unitX = rect.width / BOARD_COLUMNS, unitY = rect.height / BOARD_ROWS;
   if (!unitX || !unitY) return;
   const target = { x: (event.clientX - pointer.x) / unitX, y: (event.clientY - pointer.y) / unitY };
-  const studHeight = parseFloat(getComputedStyle(boardEl).getPropertyValue('--stud-height')) || 6;
-  const liftHeight = Math.min(1, studHeight / unitY);
+  const studs = geometry();
   const current = selection.visual ?? { x: selection.dx, y: selection.dy };
-  const visual = dragPosition(blocks, selection.ids, current, target, liftHeight);
+  const visual = dragPosition(blocks, selection.ids, current, target, studs);
   selection.visual = visual;
   if (Math.abs(visual.x) > 0.01 || Math.abs(visual.y) > 0.01) pointer.moved = true;
   for (const el of boardEl.querySelectorAll('.ghost')) {
@@ -207,7 +236,7 @@ window.addEventListener('pointerup', event => {
   if (pointer && event.pointerId === pointer.id) {
     const moved = pointer.moved; pointer = null;
     if (moved && selection) {
-      const snapped = snapOffset(blocks, selection.ids, selection.visual);
+      const snapped = snapOffset(blocks, selection.ids, selection.visual, geometry());
       if (snapped) { selection.dx = snapped.x; selection.dy = snapped.y; place(); }
       else { selection.visual = null; say('Не удалось разместить конструкцию. Попробуйте другое положение.', true); render(); }
     } else if (selection) render();
@@ -230,6 +259,9 @@ lengthInputs.forEach(input => input.addEventListener('change', () => {
   if (!allowedLengths().length) { input.checked = true; return; }
   next = makeNext(next.direction); say('Следующий ряд обновлён с учётом выбранных длин.'); render();
 }));
+$('#fall-speed').addEventListener('input', event => { $('#fall-speed-value').textContent = event.target.value; });
+$('#quotes').addEventListener('change', event => { if (!event.target.checked) $('#quote').hidden = true; });
+$('#quote-dismiss').addEventListener('click', () => { $('#quote').hidden = true; });
 $('#stud-style').addEventListener('change', event => { boardEl.classList.toggle('studs-center', event.target.value === 'center'); });
 const fullscreenButton = $('#fullscreen');
 const fullscreen = createFullscreenController(document, state => {

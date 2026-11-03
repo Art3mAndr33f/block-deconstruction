@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { addRow, canGenerate, canMove, cellsFor, connectedIds, hasMove, makeRow, moveBlocks, resolveBoard, settle } from '../src/board.js';
+import { addRow, canGenerate, canMove, cellsFor, connectedIds, isMoveGameOver, makeRow, moveBlocks, resolveBoard, settle } from '../src/board.js';
+import { hasMove } from '../src/drag.js';
 
 const b = (id, x, y, length = 1) => ({ id, x, y, length });
 
@@ -93,4 +94,14 @@ test('animation trace shows clearing before removal and synchronized falling', (
   assert.deepEqual(traced.blocks, plain.blocks);
   assert.equal(traced.score, plain.score);
   assert.equal(traced.lines, plain.lines);
+});
+
+
+test('top remains occupied after a move ends the game; auto generation requires space', () => {
+  const top = [b(1, 3, 0)];
+  const open = [b(1, 3, 1)];
+  assert.equal(isMoveGameOver(top, true, false), true);
+  assert.equal(isMoveGameOver(top, false, true), true);
+  assert.equal(isMoveGameOver(top, false, false), false);
+  assert.equal(isMoveGameOver(open, true, true), false);
 });

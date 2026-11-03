@@ -156,27 +156,8 @@ export function addRow(blocks, row, direction, nextId) {
   return [...shifted, ...row.map((piece, i) => ({ ...piece, y, id: nextId + i }))];
 }
 
-// A useful move must change the settled board (or clear a line), not merely lift
-// a brick that falls back into the same place. Search reachable ghost positions.
-export function hasMove(blocks, mode) {
-  const checkedGroups = new Set();
-  for (const block of blocks) {
-    const ids = connectedIds(blocks, block.id, mode);
-    const key = [...ids].sort((a, b) => a - b).join(',');
-    if (checkedGroups.has(key)) continue;
-    checkedGroups.add(key);
-    if (!canMove(blocks, ids, 0, -1)) continue;
-    const queue = [[0, -1]], visited = new Set(['0,-1']);
-    for (let i = 0; i < queue.length; i++) {
-      const [dx, dy] = queue[i];
-      const result = resolveBoard(moveBlocks(blocks, ids, dx, dy));
-      if (result.lines || result.blocks.some((b, n) => b.x !== blocks[n].x || b.y !== blocks[n].y)) return true;
-      for (const [sx, sy] of [[0, -1], [0, 1], [-1, 0], [1, 0]]) {
-        if (sx && dy >= 0) continue;
-        const x = dx + sx, y = dy + sy, pos = `${x},${y}`;
-        if (!visited.has(pos) && canMove(blocks, ids, x, y)) { visited.add(pos); queue.push([x, y]); }
-      }
-    }
-  }
-  return false;
+// A top row occupied before and after a committed move is terminal. In automatic
+// mode an occupied top row after any move also prevents the required next row.
+export function isMoveGameOver(blocks, wasFullHeight, autoRow) {
+  return !canGenerate(blocks) && (wasFullHeight || autoRow);
 }
