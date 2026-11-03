@@ -1,7 +1,7 @@
 import { BOARD_COLUMNS, BOARD_ROWS, addRow, canGenerate, canMove, connectedIds, isMoveGameOver, makeRow, moveBlocks, resolveBoard } from './board.js?v=8';
 import { createFullscreenController } from './fullscreen.js?v=8';
 import { dragPosition, snapOffset, hasMove, sweepAxis } from './drag.js?v=8';
-import { collectFallFrames, fallKeyframes } from './motion.js?v=8';
+import { collectFallFrames, fallKeyframes, fallMotionEnabled } from './motion.js?v=10';
 
 const $ = selector => document.querySelector(selector);
 const boardEl = $('#board'), messageEl = $('#message');
@@ -32,7 +32,15 @@ function geometry() {
 let blocks, next, nextId, score, lines, selection, gameOver, pointer;
 let busy = false, epoch = 0, clearRows = [];
 const lengthInputs = [...document.querySelectorAll('.length-options input')];
-const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
+const reducedMotion = () => motionPreference.matches;
+const showFallMotion = () => fallMotionEnabled($('#fall-motion').value, reducedMotion());
+function updateFallMotionStatus() {
+  const status = $('#fall-motion-status');
+  if (showFallMotion()) status.textContent = 'Сейчас: анимация падения включена.';
+  else if ($('#fall-motion').value === 'system') status.textContent = 'Сейчас падение мгновенное: на устройстве включено уменьшение движения. Для проверки можно выбрать «Плавное падение».';
+  else status.textContent = 'Сейчас: падение без движения.';
+}
 const pause = (ms, always = false) => new Promise(resolve => setTimeout(resolve, reducedMotion() && !always ? 0 : ms));
 // Timers can run ahead of animations when a frame is delayed or a tab is hidden.
 const waitAnimations = (animations, fallback) => animations.length
@@ -76,7 +84,7 @@ async function animateResolution(initialMessage, { fromGhost = false, afterMove 
       say('Конструкции падают одновременно.');
       const duration = (positions.length - 1) * (1000 / Number($('#fall-speed').value));
       const animations = render({ fallFrames: positions, duration });
-      await waitAnimations(animations, duration);
+      if (showFallMotion()) await waitAnimations(animations, duration);
     } else {
       blocks = frame.blocks; clearRows = frame.rows;
       score = baseScore + frame.score; lines = baseLines + frame.lines;
@@ -189,7 +197,7 @@ function render({ fromGhost = false, fallFrames = null, duration = 220 } = {}) {
   if (selection) for (const block of blocks.filter(b => selection.ids.has(b.id))) boardEl.append(brick(block, true));
   if (focusedId) boardEl.querySelector(`button[data-id="${focusedId}"]`)?.focus({ preventScroll: true });
   // Animate from the previous visual position, not from the original cell when dropping a ghost.
-  if (!reducedMotion()) {
+  if (fallFrames ? showFallMotion() : !reducedMotion()) {
     const cellHeight = boardEl.clientHeight / BOARD_ROWS;
     for (const el of boardEl.querySelectorAll('button.brick')) {
       const id = Number(el.dataset.id), now = el.getBoundingClientRect();
@@ -231,7 +239,7 @@ function render({ fromGhost = false, fallFrames = null, duration = 220 } = {}) {
   $('.move-controls').classList.toggle('active', !!selection && !busy);
   $('#generate').disabled = gameOver || !!selection || busy;
   document.querySelectorAll('#place, #cancel').forEach(el => el.disabled = !selection || gameOver || busy);
-  [bondEl, directionEl, autoRowEl, $('#stud-style'), $('#fall-speed'), $('#burn-duration'), $('#animation-demo'), ...lengthInputs].forEach(el => el.disabled = busy);
+  [bondEl, directionEl, autoRowEl, $('#stud-style'), $('#fall-speed'), $('#burn-duration'), $('#animation-demo'), $('#fall-motion'), ...lengthInputs].forEach(el => el.disabled = busy);
   if (!busy && allowedLengths().length === 1) lengthInputs.find(input => input.checked).disabled = true;
   return animations;
 }
@@ -285,6 +293,9 @@ lengthInputs.forEach(input => input.addEventListener('change', () => {
   if (!allowedLengths().length) { input.checked = true; return; }
   next = makeNext(next.direction); say('Следующий ряд обновлён с учётом выбранных длин.'); render();
 }));
+$('#fall-motion').addEventListener('change', updateFallMotionStatus);
+motionPreference.addEventListener?.('change', updateFallMotionStatus);
+updateFallMotionStatus();
 $('#fall-speed').addEventListener('input', event => { $('#fall-speed-value').textContent = event.target.value; });
 $('#burn-duration').addEventListener('input', event => { $('#burn-duration-value').textContent = event.target.value; });
 $('#animation-demo').addEventListener('click', () => {

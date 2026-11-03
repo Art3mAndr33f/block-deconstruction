@@ -101,3 +101,17 @@ test('reset during a demo cancels its pending clearing phases', async () => {
     assert.equal($('#board').classList.contains('is-burning'), false);
   } finally { dom.window.close(); Math.random = originalRandom; }
 });
+
+
+test('fall animation setting explains and can override reduced motion', async () => {
+  const { dom, $ } = await setup('motion');
+  try {
+    assert.match($('#fall-motion-status').textContent, /мгновенное/);
+    $('#fall-motion').value = 'full';
+    $('#fall-motion').dispatchEvent(new dom.window.Event('change'));
+    assert.match($('#fall-motion-status').textContent, /анимация падения включена/);
+    $('#fall-motion').value = 'off';
+    $('#fall-motion').dispatchEvent(new dom.window.Event('change'));
+    assert.match($('#fall-motion-status').textContent, /без движения/);
+  } finally { dom.window.close(); Math.random = originalRandom; }
+});
