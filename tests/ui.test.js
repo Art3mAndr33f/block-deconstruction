@@ -18,6 +18,11 @@ async function setup(secondColumn) {
   globalThis.location = dom.window.location;
   globalThis.getComputedStyle = dom.window.getComputedStyle.bind(dom.window);
   dom.window.matchMedia = () => ({ matches: true });
+  const animations = [];
+  dom.window.HTMLElement.prototype.animate = function (keyframes, options) {
+    animations.push({ keyframes, options });
+    return { finished: Promise.resolve() };
+  };
   Math.random = () => 0;
   await import(`../src/main.js?test=${secondColumn}`);
   await ready(dom.window.document);
@@ -30,7 +35,7 @@ async function setup(secondColumn) {
   $('#reset').click();
   await ready(dom.window.document);
   assert.equal(dom.window.document.querySelectorAll('#board button.brick').length, 7);
-  return { dom, $ };
+  return { dom, $, animations };
 }
 
 const originalRandom = Math.random;
@@ -103,25 +108,27 @@ test('reset during a demo cancels its pending clearing phases', async () => {
 });
 
 
-test('fall animation setting explains and can override reduced motion', async () => {
-  const { dom, $ } = await setup('motion');
+test('default fall speed is 15 cells per second without changing burn duration', async () => {
+  const { dom, $ } = await setup('default-speed');
   try {
-    assert.match($('#fall-motion-status').textContent, /мгновенное/);
-    $('#fall-motion').value = 'full';
-    $('#fall-motion').dispatchEvent(new dom.window.Event('change'));
-    assert.match($('#fall-motion-status').textContent, /анимация падения включена/);
-    $('#fall-motion').value = 'off';
-    $('#fall-motion').dispatchEvent(new dom.window.Event('change'));
-    assert.match($('#fall-motion-status').textContent, /без движения/);
+    assert.equal($('#fall-speed').value, '15');
+    assert.equal($('#fall-speed-value').textContent, '15');
+    assert.equal($('#burn-duration').value, '1.2');
   } finally { dom.window.close(); Math.random = originalRandom; }
 });
 
 
-test('default fall speed is 7.5 cells per second without changing burn duration', async () => {
-  const { dom, $ } = await setup('default-speed');
+test('fall remains animated under reduced motion and uses the accelerated duration', async () => {
+  const { dom, $, animations } = await setup('accelerated-fall');
   try {
-    assert.equal($('#fall-speed').value, '7.5');
-    assert.equal($('#fall-speed-value').textContent, '7.5');
-    assert.equal($('#burn-duration').value, '1.2');
+    animations.length = 0;
+    $('#animation-demo').click();
+    // jsdom has no renderer; the mock records the Web Animations API request.
+    for (let i = 0; i < 250 && !animations.length; i++) await wait(10);
+    assert.ok(animations.length > 0, 'fall animation was not requested');
+    assert.ok(Math.abs(animations[0].options.duration - (2000 / 15)) < 1e-6);
+    assert.equal(animations[0].options.easing, 'linear');
+    assert.equal($('#fall-motion'), null);
+    await ready(dom.window.document);
   } finally { dom.window.close(); Math.random = originalRandom; }
 });

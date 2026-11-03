@@ -14,10 +14,3 @@ export function fallKeyframes(positions, id, cellHeight) {
   const last = points.at(-1);
   return points.map((point, i) => ({ transform: `translateY(${(point.y - last.y) * cellHeight}px)`, offset: i / (points.length - 1) }));
 }
-
-// Respect reduced motion by default; enabling movement is an explicit choice.
-export function fallMotionEnabled(setting, systemReduced) {
-  if (setting === 'full') return true;
-  if (setting === 'off') return false;
-  return !systemReduced;
-}

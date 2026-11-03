@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { collectFallFrames, fallKeyframes, fallMotionEnabled } from '../src/motion.js';
+import { collectFallFrames, fallKeyframes } from '../src/motion.js';
 
 const blocks = (a, b) => [{ id: 1, y: a }, { id: 2, y: b }];
 
@@ -28,12 +28,4 @@ test('fall steps animate continuously without skipping a subsequent line clear',
 test('stationary and missing bricks do not create fall animations', () => {
   assert.deepEqual(fallKeyframes([blocks(3, 9), blocks(4, 9)], 2, 30), []);
   assert.deepEqual(fallKeyframes([blocks(3, 9), []], 1, 30), []);
-});
-
-
-test('fall movement follows the system unless the player explicitly overrides it', () => {
-  assert.equal(fallMotionEnabled('system', true), false);
-  assert.equal(fallMotionEnabled('system', false), true);
-  assert.equal(fallMotionEnabled('full', true), true);
-  assert.equal(fallMotionEnabled('off', false), false);
 });
