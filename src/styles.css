@@ -45,8 +45,8 @@ body.expanded-mode{min-height:100vh;background:var(--bg)}
 .stud{justify-self:center;width:39%;max-width:var(--stud-max-width)}
 .studs-center .stud{align-self:center}
 @media(max-width:650px){.board{--stud-max-width:8px;--brick-inset:2px}}
-.burn-line{position:absolute;left:0;width:100%;z-index:60;pointer-events:none;background:linear-gradient(90deg,transparent,#f4d77c99 20%,#fff9c9dd 50%,#f2a964aa 80%,transparent);box-shadow:0 0 20px #ffcd78aa;animation:burn-line 320ms ease-in forwards}
-.clearing .brick-inner{animation:burn-brick 320ms ease-in forwards}
+.burn-line{position:absolute;left:0;width:100%;z-index:60;pointer-events:none;background:linear-gradient(90deg,transparent,#f4d77c99 20%,#fff9c9dd 50%,#f2a964aa 80%,transparent);box-shadow:0 0 20px #ffcd78aa;animation:burn-line 850ms ease-in forwards}
+.clearing .brick-inner{animation:burn-brick 850ms ease-in forwards}
 @keyframes burn-line{0%{opacity:.3;transform:scaleX(.7)}45%{opacity:1;transform:scaleX(1)}100%{opacity:0;filter:blur(3px)}}
 @keyframes burn-brick{0%{filter:brightness(1)}40%{filter:brightness(2);box-shadow:0 0 18px #ffc970}100%{filter:brightness(1.6);opacity:0;transform:scale(.9)}}
 .mode-link{color:#cbdba4;text-decoration:none;font-size:11px;white-space:nowrap}.mode-link:hover{text-decoration:underline}

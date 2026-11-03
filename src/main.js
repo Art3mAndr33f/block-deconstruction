@@ -1,7 +1,7 @@
-import { BOARD_COLUMNS, BOARD_ROWS, addRow, canGenerate, canMove, connectedIds, isMoveGameOver, makeRow, moveBlocks, resolveBoard } from './board.js?v=7';
-import { createFullscreenController } from './fullscreen.js?v=7';
-import { dragPosition, snapOffset, hasMove, sweepAxis } from './drag.js?v=7';
-import { collectFallFrames, fallKeyframes } from './motion.js?v=7';
+import { BOARD_COLUMNS, BOARD_ROWS, addRow, canGenerate, canMove, connectedIds, isMoveGameOver, makeRow, moveBlocks, resolveBoard } from './board.js?v=8';
+import { createFullscreenController } from './fullscreen.js?v=8';
+import { dragPosition, snapOffset, hasMove, sweepAxis } from './drag.js?v=8';
+import { collectFallFrames, fallKeyframes } from './motion.js?v=8';
 
 const $ = selector => document.querySelector(selector);
 const boardEl = $('#board'), messageEl = $('#message');
@@ -79,7 +79,7 @@ async function animateResolution(initialMessage, { fromGhost = false, afterMove 
       score = baseScore + frame.score; lines = baseLines + frame.lines;
       if (frame.type === 'clear') say(`Линия заполнена! ${frame.combo > 1 ? `Комбо ×${frame.combo}` : 'Освобождаем пространство.'}`);
       render();
-      await pause(frame.type === 'clear' ? 320 : 120);
+      await pause(frame.type === 'clear' ? 850 : 120);
     }
     if (action !== epoch) return false;
   }
@@ -89,15 +89,21 @@ async function animateResolution(initialMessage, { fromGhost = false, afterMove 
   else say(initialMessage);
   if (result.combo > 1 || result.lines > 1) showQuote();
   checkGameOver({ afterMove, wasFullHeight }); render();
-  return true;
+  // Empty fields are unplayable: refill once in both modes, including after a
+  // generation-triggered cascade. Signal place() to avoid a second auto row.
+  if (!gameOver && blocks.length === 0) {
+    generate(false, 'Поле очищено. Добавлен новый ряд.');
+    return { refilled: true };
+  }
+  return { refilled: false };
 }
-function generate(initial = false) {
+function generate(initial = false, message = '') {
   if (gameOver || busy) return;
   if (selection) { say('Сначала разместите конструкцию или отмените ход.', true); return; }
   const added = addRow(blocks, next.row, next.direction, nextId);
   if (!added) { checkGameOver(); if (!gameOver) say('Нет места для нового ряда. Освободите верх поля.', true); render(); return; }
   blocks = added; nextId += next.row.length; next = makeNext();
-  animateResolution(initial ? 'Выберите блок, чтобы начать движение.' : 'Новый ряд добавлен. Выберите блок.');
+  animateResolution(initial ? 'Выберите блок, чтобы начать движение.' : (message || 'Новый ряд добавлен. Выберите блок.'));
 }
 function select(id) {
   if (gameOver || busy) return;
@@ -127,7 +133,7 @@ async function place() {
   blocks = moveBlocks(blocks, selection.ids, selection.dx, selection.dy);
   selection = null;
   const completed = await animateResolution('Конструкция размещена.', { fromGhost: true, afterMove: true, wasFullHeight });
-  if (completed && autoRowEl.checked && !gameOver) generate();
+  if (completed && !completed.refilled && autoRowEl.checked && !gameOver) generate();
 }
 function cancel() { selection = null; say('Ход отменён. Выберите блок.'); render(); }
 function position(element, block, dx = 0, dy = 0) {

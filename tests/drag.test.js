@@ -56,3 +56,20 @@ test('extraction downwards, walls, and high-speed body collision remain safe', (
   assert.equal(sweepAxis(blocks, ids, { x: 0, y: 0 }, 'x', 7, studs), 1);
   assert.equal(hasMove([b(1, 2, 0)], 'above', studs), true);
 });
+
+test('a slightly off-centre one-cell ghost is guided into a one-cell opening', () => {
+  const blocks = [b(1, 2, 4), b(2, 0, 5, 2), b(3, 3, 5, 2)], ids = new Set([1]);
+  // The pointer is slightly right of centre, as in the reported screenshot.
+  for (const offset of [-0.14, 0.14, 0.35]) {
+    const preview = dragPosition(blocks, ids, { x: 0, y: 0 }, { x: offset, y: 1 }, studs);
+    near(preview.x, 0); near(preview.y, 1);
+    assert.deepEqual(snapOffset(blocks, ids, preview, studs), { x: 0, y: 1 });
+  }
+});
+
+test('gap guidance never pushes a wider block through an opening', () => {
+  const blocks = [b(1, 2, 4, 2), b(2, 0, 5, 2), b(3, 3, 5, 2)], ids = new Set([1]);
+  const preview = dragPosition(blocks, ids, { x: 0, y: 0 }, { x: 0.14, y: 1 }, studs);
+  assert.ok(preview.y < 1);
+  assert.equal(canPreview(blocks, ids, preview.x, preview.y), true);
+});

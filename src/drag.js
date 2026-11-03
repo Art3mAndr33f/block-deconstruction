@@ -1,4 +1,4 @@
-import { BOARD_COLUMNS, BOARD_ROWS, connectedIds, moveBlocks, resolveBoard } from './board.js?v=7';
+import { BOARD_COLUMNS, BOARD_ROWS, connectedIds, moveBlocks, resolveBoard } from './board.js?v=8';
 
 const EPS = 1e-7;
 export const DEFAULT_STUDS = { height: 0.12, maxWidth: 0.32, inset: 0.04 };
@@ -69,11 +69,27 @@ export function dragPosition(blocks, ids, position, target, studs = DEFAULT_STUD
   const next = { ...position };
   if (target.y < next.y) next.y = sweepAxis(blocks, ids, next, 'y', target.y, studs);
   next.x = sweepAxis(blocks, ids, next, 'x', target.x, studs);
-  if (target.y > next.y) {
-    next.y = sweepAxis(blocks, ids, next, 'y', target.y, studs);
-    // Lowering can disengage a stud from an upper block in this same gesture.
-    next.x = sweepAxis(blocks, ids, next, 'x', target.x, studs);
+  next.y = sweepAxis(blocks, ids, next, 'y', target.y, studs);
+
+  // A one-cell opening requires exact alignment in the physics model. Guide a
+  // nearby ghost to the grid centre only when doing so is collision-free and
+  // actually lets it travel farther in the requested vertical direction.
+  if (Math.abs(target.y - next.y) > EPS) {
+    const alignedX = Math.round(next.x);
+    if (Math.abs(alignedX - next.x) <= 0.4 + EPS) {
+      const reachedX = sweepAxis(blocks, ids, next, 'x', alignedX, studs);
+      if (Math.abs(reachedX - alignedX) < EPS) {
+        const aligned = { x: alignedX, y: next.y };
+        const reachedY = sweepAxis(blocks, ids, aligned, 'y', target.y, studs);
+        if (Math.abs(target.y - reachedY) + EPS < Math.abs(target.y - next.y)) {
+          return { x: alignedX, y: reachedY };
+        }
+      }
+    }
   }
+  // A vertical movement can also free the studs for a sideways movement in
+  // this same pointer event; never bypass the normal swept collision checks.
+  next.x = sweepAxis(blocks, ids, next, 'x', target.x, studs);
   return next;
 }
 
