@@ -115,3 +115,13 @@ test('fall animation setting explains and can override reduced motion', async ()
     assert.match($('#fall-motion-status').textContent, /без движения/);
   } finally { dom.window.close(); Math.random = originalRandom; }
 });
+
+
+test('default fall speed is 7.5 cells per second without changing burn duration', async () => {
+  const { dom, $ } = await setup('default-speed');
+  try {
+    assert.equal($('#fall-speed').value, '7.5');
+    assert.equal($('#fall-speed-value').textContent, '7.5');
+    assert.equal($('#burn-duration').value, '1.2');
+  } finally { dom.window.close(); Math.random = originalRandom; }
+});
