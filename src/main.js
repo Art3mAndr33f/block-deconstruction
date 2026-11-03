@@ -33,7 +33,10 @@ let blocks, next, nextId, score, lines, selection, gameOver, pointer;
 let busy = false, epoch = 0, clearRows = [];
 const lengthInputs = [...document.querySelectorAll('.length-options input')];
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-const pause = ms => new Promise(resolve => setTimeout(resolve, reducedMotion() ? 0 : ms));
+const pause = (ms, always = false) => new Promise(resolve => setTimeout(resolve, reducedMotion() && !always ? 0 : ms));
+// Timers can run ahead of animations when a frame is delayed or a tab is hidden.
+const waitAnimations = (animations, fallback) => animations.length
+  ? Promise.allSettled(animations.map(animation => animation.finished)) : pause(fallback);
 const allowedLengths = () => lengthInputs.filter(input => input.checked).map(input => Number(input.value));
 function makeNext(direction = directionEl.value === 'random' ? (Math.random() < 0.5 ? 'top' : 'bottom') : directionEl.value) {
   return { row: makeRow(Math.random, allowedLengths()), direction };
@@ -44,7 +47,7 @@ function say(text, error = false) {
   messageEl.classList.toggle('error', error);
 }
 function newGame() {
-  epoch++; busy = false; clearRows = [];
+  epoch++; busy = false; clearRows = []; boardEl.classList.remove('is-burning');
   blocks = []; nextId = 1; score = 0; lines = 0; selection = null; gameOver = false; pointer = null;
   next = makeNext(); $('#quote').hidden = true;
   generate(true);
@@ -72,17 +75,32 @@ async function animateResolution(initialMessage, { fromGhost = false, afterMove 
       blocks = positions.at(-1); clearRows = [];
       say('Конструкции падают одновременно.');
       const duration = (positions.length - 1) * (1000 / Number($('#fall-speed').value));
-      render({ fallFrames: positions, duration });
-      await pause(duration);
+      const animations = render({ fallFrames: positions, duration });
+      await waitAnimations(animations, duration);
     } else {
       blocks = frame.blocks; clearRows = frame.rows;
       score = baseScore + frame.score; lines = baseLines + frame.lines;
       if (frame.type === 'clear') say(`Линия заполнена! ${frame.combo > 1 ? `Комбо ×${frame.combo}` : 'Освобождаем пространство.'}`);
+      boardEl.classList.remove('is-burning');
       render();
-      await pause(frame.type === 'clear' ? 850 : 120);
+      if (frame.type === 'clear') {
+        // First let the player recognise the completed row, then start the burn.
+        await pause(reducedMotion() ? 200 : 400, true);
+        if (action !== epoch) return false;
+        const duration = Number($('#burn-duration').value) * 1000;
+        boardEl.style.setProperty('--burn-duration', `${duration}ms`);
+        boardEl.classList.add('is-burning');
+        if (reducedMotion()) await pause(500, true);
+        else {
+          const animations = [...boardEl.querySelectorAll('.burn-line, .clearing .brick-inner')]
+            .flatMap(el => el.getAnimations ? el.getAnimations() : []);
+          await waitAnimations(animations, duration);
+        }
+      } else await pause(120);
     }
     if (action !== epoch) return false;
   }
+  boardEl.classList.remove('is-burning');
   blocks = result.blocks; clearRows = []; score = baseScore + result.score; lines = baseLines + result.lines;
   busy = false;
   if (result.lines) say(`Линии: ${result.lines} · +${result.score} очков${result.combo > 1 ? ` · комбо ×${result.combo}` : ''}`);
@@ -157,6 +175,7 @@ function brick(block, ghost = false) {
   return el;
 }
 function render({ fromGhost = false, fallFrames = null, duration = 220 } = {}) {
+  const animations = [];
   const focusedId = boardEl.contains(document.activeElement) ? document.activeElement.dataset.id : null;
   const oldPositions = new Map([...boardEl.querySelectorAll('button.brick')].map(el => [el.dataset.id, el.getBoundingClientRect()]));
   const oldGhosts = new Map([...boardEl.querySelectorAll('.ghost')].map(el => [el.dataset.id, el.getBoundingClientRect()]));
@@ -176,7 +195,7 @@ function render({ fromGhost = false, fallFrames = null, duration = 220 } = {}) {
       const id = Number(el.dataset.id), now = el.getBoundingClientRect();
       if (fallFrames) {
         const keyframes = fallKeyframes(fallFrames, id, cellHeight);
-        if (keyframes.length) el.animate(keyframes, { duration, easing: 'linear' });
+        if (keyframes.length) animations.push(el.animate(keyframes, { duration, easing: 'linear' }));
       } else {
         const old = (fromGhost && oldGhosts.get(el.dataset.id)) || oldPositions.get(el.dataset.id);
         if (old && (old.left !== now.left || old.top !== now.top)) el.animate([{ transform: `translate(${old.left - now.left}px, ${old.top - now.top}px)` }, { transform: 'translate(0, 0)' }], { duration, easing: 'ease-out' });
@@ -212,8 +231,9 @@ function render({ fromGhost = false, fallFrames = null, duration = 220 } = {}) {
   $('.move-controls').classList.toggle('active', !!selection && !busy);
   $('#generate').disabled = gameOver || !!selection || busy;
   document.querySelectorAll('#place, #cancel').forEach(el => el.disabled = !selection || gameOver || busy);
-  [bondEl, directionEl, autoRowEl, $('#stud-style'), $('#fall-speed'), ...lengthInputs].forEach(el => el.disabled = busy);
+  [bondEl, directionEl, autoRowEl, $('#stud-style'), $('#fall-speed'), $('#burn-duration'), $('#animation-demo'), ...lengthInputs].forEach(el => el.disabled = busy);
   if (!busy && allowedLengths().length === 1) lengthInputs.find(input => input.checked).disabled = true;
+  return animations;
 }
 boardEl.addEventListener('pointerdown', event => {
   const target = event.target.closest('button[data-id]');
@@ -266,6 +286,21 @@ lengthInputs.forEach(input => input.addEventListener('change', () => {
   next = makeNext(next.direction); say('Следующий ряд обновлён с учётом выбранных длин.'); render();
 }));
 $('#fall-speed').addEventListener('input', event => { $('#fall-speed-value').textContent = event.target.value; });
+$('#burn-duration').addEventListener('input', event => { $('#burn-duration-value').textContent = event.target.value; });
+$('#animation-demo').addEventListener('click', () => {
+  // A reproducible two-wave cascade: reset the current game, then clear, fall,
+  // clear again, and refill. The normal resolution path and settings are used.
+  epoch++; busy = false; clearRows = []; boardEl.classList.remove('is-burning');
+  score = 0; lines = 0; selection = null; gameOver = false; pointer = null;
+  const pieces = [
+    [0, 9], [6, 9], [0, 8], [2, 8], [4, 8], [6, 8], [2, 7], [4, 7],
+  ];
+  blocks = pieces.map(([x, y], i) => ({ id: i + 1, x, y, length: 2 }));
+  nextId = blocks.length + 1; next = makeNext(); $('#quote').hidden = true;
+  boardEl.replaceChildren(); // Do not animate reused IDs from the previous game.
+  boardEl.scrollIntoView?.({ behavior: 'instant', block: 'center' });
+  animateResolution('Демонстрация: две линии, падение и новое поле.');
+});
 $('#quotes').addEventListener('change', event => { if (!event.target.checked) $('#quote').hidden = true; });
 $('#quote-dismiss').addEventListener('click', () => { $('#quote').hidden = true; });
 $('#stud-style').addEventListener('change', event => { boardEl.classList.toggle('studs-center', event.target.value === 'center'); });

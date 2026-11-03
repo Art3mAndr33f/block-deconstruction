@@ -60,3 +60,16 @@ body.expanded-mode{min-height:100vh;background:var(--bg)}
 /* In the alternate circular style the functional upper studs remain visible. */
 .studs-center .brick-inner::before{content:"";position:absolute;left:0;right:0;top:calc(-1 * var(--stud-height));height:var(--stud-height);background-image:linear-gradient(to right,transparent calc(50% - min(19.5%,8px)),var(--stud-color) 0 calc(50% + min(19.5%,8px)),transparent 0);background-size:calc(100% / var(--brick-length)) 100%;background-repeat:repeat-x}
 @media(max-width:650px){.studs-center .brick-inner::before{background-image:linear-gradient(to right,transparent calc(50% - min(19.5%,4px)),var(--stud-color) 0 calc(50% + min(19.5%,4px)),transparent 0)}}
+
+/* The player can recognise a completed row before the burn begins. */
+#burn-duration{width:100%;accent-color:#cddd90}
+.burn-line{animation:none;opacity:.55}
+.clearing .brick-inner{animation:none;outline:2px solid #fff1b4;box-shadow:0 0 12px #ffc970}
+.board.is-burning .burn-line{animation:burn-line var(--burn-duration,1200ms) ease-in forwards}
+.board.is-burning .clearing .brick-inner{animation:burn-brick var(--burn-duration,1200ms) ease-in forwards}
+@media(prefers-reduced-motion:reduce){
+  .board.is-burning .burn-line,.board.is-burning .clearing .brick-inner{animation:none;opacity:1}
+}
+/* Avoid animating blur, brightness and shadows: they can cause costly repaints. */
+@keyframes burn-line{0%{opacity:.35;transform:scaleX(.8)}35%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(1)}}
+@keyframes burn-brick{0%,35%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.9)}}

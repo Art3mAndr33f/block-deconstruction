@@ -5,7 +5,7 @@ import { JSDOM } from 'jsdom';
 
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function ready(document) {
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < 400; i++) {
     if (!document.querySelector('#generate').disabled && document.querySelector('#board button.brick')) return;
     await wait(10);
   }
@@ -67,5 +67,37 @@ test('automatic generation does not add a second row after an empty-field refill
     assert.equal($('#lines').textContent, 'ЛИНИЙ: 1');
     assert.equal($('#score').textContent, '100');
     assert.equal(dom.window.document.querySelectorAll('#board button.brick').length, 1);
+  } finally { dom.window.close(); Math.random = originalRandom; }
+});
+
+
+test('the animation demo replays two clearing waves and refills the field', async () => {
+  const { dom, $ } = await setup('demo');
+  try {
+    $('#animation-demo').click();
+    await wait(40);
+    assert.equal($('#animation-demo').disabled, true);
+    assert.equal(dom.window.document.querySelectorAll('.clearing').length, 4);
+    assert.equal($('#score').textContent, '100');
+    await ready(dom.window.document);
+    assert.equal($('#lines').textContent, 'ЛИНИЙ: 2');
+    assert.equal($('#score').textContent, '300');
+    assert.ok(dom.window.document.querySelector('#board button.brick'));
+    assert.equal($('#animation-demo').disabled, false);
+  } finally { dom.window.close(); Math.random = originalRandom; }
+});
+
+test('reset during a demo cancels its pending clearing phases', async () => {
+  const { dom, $ } = await setup('cancel');
+  try {
+    $('#animation-demo').click();
+    await wait(40);
+    $('#reset').click();
+    await ready(dom.window.document);
+    await wait(800);
+    assert.equal($('#lines').textContent, 'ЛИНИЙ: 0');
+    assert.equal($('#score').textContent, '0');
+    assert.equal(dom.window.document.querySelectorAll('.clearing').length, 0);
+    assert.equal($('#board').classList.contains('is-burning'), false);
   } finally { dom.window.close(); Math.random = originalRandom; }
 });
