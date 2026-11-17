@@ -2,6 +2,11 @@ import { BOARD_COLUMNS, BOARD_ROWS, addRow, canGenerate, canMove, connectedIds, 
 import { createFullscreenController } from './fullscreen.js?v=8';
 import { dragPosition, snapOffset, hasMove, sweepAxis } from './drag.js?v=8';
 import { collectFallFrames, fallKeyframes } from './motion.js?v=11';
+import { createQuoteSelector, quoteSource, taoTeChing } from './quotes.js?v=1';
+import { createSpeechController } from './speech.js?v=1';
+import { createQuoteReveal, estimateDuration } from './reveal.js?v=1';
+import { createRecordStore } from './records.js?v=1';
+import { createStorage } from './storage.js?v=1';
 
 const $ = selector => document.querySelector(selector);
 const boardEl = $('#board'), messageEl = $('#message');
@@ -12,15 +17,76 @@ document.body.classList.toggle('play-mode', !prototype);
 if (!prototype) { bondEl.value = 'above'; directionEl.value = 'random'; autoRowEl.checked = true; }
 $('#mode-link').href = prototype ? location.pathname : '?mode=prototype';
 $('#mode-link').textContent = prototype ? 'Играть ↗' : 'Прототип ↗';
-const quotes = [
-  { text: 'Знающий других мудр; знающий себя просветлён.', source: 'Дао дэ цзин, глава 33 · вольный перевод' },
-  { text: 'Путь в тысячу ли начинается с первого шага.', source: 'Дао дэ цзин, глава 64 · вольный перевод' },
-  { text: 'Кто умеет довольствоваться, тот богат.', source: 'Дао дэ цзин, глава 33 · вольный перевод' },
-];
+// Игра открывается по умолчанию; прототип — отдельный адрес с настройками.
+$('#mode-link').title = prototype ? 'Открыть игру без настроек' : 'Открыть прототип с настройками физики';
+const SETTINGS_KEY = 'promezhutok.settings.v1';
+const QUOTES_KEY = 'promezhutok.quotes.v1';
+const settingsStorage = createStorage();
+const quotesCheckbox = $('#quotes'), voiceCheckbox = $('#voice');
+const quoteCard = $('#quote'), quoteVoiceButton = $('#quote-voice');
+// Веса цитат восстанавливаются из истории: показанное недавно не повторяется и
+// между сессиями. random читается при каждом вызове, чтобы генерация ряда и
+// выбор цитаты оставались одинаково управляемыми в тестах.
+const quoteSelector = createQuoteSelector({
+  quotes: taoTeChing,
+  random: () => Math.random(),
+  history: settingsStorage.read(QUOTES_KEY, {})?.history ?? [],
+});
+const speech = createSpeechController();
+const records = createRecordStore({ storage: settingsStorage });
+// В прототипе правила и поле настраиваются, поэтому рекорды пишет только игра.
+const recordsEnabled = !prototype;
+let lastQuote = null, activeReveal = null;
+
+function loadSettings() {
+  const saved = settingsStorage.read(SETTINGS_KEY, {});
+  if (!saved || typeof saved !== 'object') return;
+  if (typeof saved.quotes === 'boolean') quotesCheckbox.checked = saved.quotes;
+  if (typeof saved.voice === 'boolean') voiceCheckbox.checked = saved.voice;
+}
+function saveSettings() {
+  settingsStorage.write(SETTINGS_KEY, { quotes: quotesCheckbox.checked, voice: voiceCheckbox.checked });
+}
+function plural(count, one, few, many) {
+  const mod10 = count % 10, mod100 = count % 100;
+  if (mod10 === 1 && mod100 !== 11) return one;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return few;
+  return many;
+}
+function hideQuote() {
+  activeReveal?.stop(); activeReveal = null;
+  speech.stop();
+  quoteCard.hidden = true;
+  quoteVoiceButton.textContent = '▶ Озвучить';
+}
+function presentQuote(quote) {
+  lastQuote = quote;
+  $('#quote-source').textContent = quoteSource(quote);
+  activeReveal?.stop();
+  const reveal = createQuoteReveal({ element: $('#quote-text'), text: quote.text, reducedMotion: reducedMotion() });
+  activeReveal = reveal;
+  quoteCard.hidden = false;
+  reveal.start(estimateDuration(quote.text));
+  if (voiceCheckbox.checked) speakQuote(quote);
+  else { quoteVoiceButton.hidden = !speech.supported; quoteVoiceButton.textContent = '▶ Озвучить'; }
+}
+function speakQuote(quote) {
+  const started = speech.speak(quote.text, {
+    // Слова открываются по мере произнесения; если границ нет, сработает
+    // резервное расписание самого reveal.
+    onBoundary: index => activeReveal?.revealTo(index),
+    onEnd: () => { activeReveal?.finish(); quoteVoiceButton.textContent = '▶ Озвучить'; },
+    onError: () => { activeReveal?.finish(); quoteVoiceButton.textContent = '▶ Озвучить'; },
+  });
+  quoteVoiceButton.hidden = !speech.supported;
+  if (started) quoteVoiceButton.textContent = '■ Остановить';
+  return started;
+}
 function showQuote() {
-  if (!$('#quotes').checked) return;
-  const quote = quotes[Math.floor(Math.random() * quotes.length)];
-  $('#quote-text').textContent = quote.text; $('#quote-source').textContent = quote.source; $('#quote').hidden = false;
+  if (!quotesCheckbox.checked) return;
+  const quote = quoteSelector.pick(lastQuote);
+  settingsStorage.write(QUOTES_KEY, { history: quoteSelector.history });
+  presentQuote(quote);
 }
 function geometry() {
   const style = getComputedStyle(boardEl), rect = boardEl.getBoundingClientRect();
@@ -31,6 +97,25 @@ function geometry() {
 }
 let blocks, next, nextId, score, lines, selection, gameOver, pointer;
 let busy = false, epoch = 0, clearRows = [];
+// Итог одного хода игрока: линии считаются и до, и после появления нового ряда.
+// Иначе «одна линия до и одна после» давало два отдельных результата по одной
+// линии, и цитата за ход не появлялась.
+let turn = { lines: 0, combo: 0, score: 0, quoteShown: false };
+function startTurn() {
+  turn = { lines: 0, combo: 0, score: 0, quoteShown: false };
+}
+function accountResolution(result) {
+  if (!result) return false;
+  turn.lines += result.lines;
+  turn.combo = Math.max(turn.combo, result.combo);
+  turn.score += result.score;
+  if (turn.quoteShown) return false;
+  if (turn.lines > 1 || turn.combo > 1) {
+    turn.quoteShown = true;
+    return true;
+  }
+  return false;
+}
 const lengthInputs = [...document.querySelectorAll('.length-options input')];
 const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
 const reducedMotion = () => motionPreference.matches;
@@ -50,13 +135,44 @@ function say(text, error = false) {
 function newGame() {
   epoch++; busy = false; clearRows = []; boardEl.classList.remove('is-burning');
   blocks = []; nextId = 1; score = 0; lines = 0; selection = null; gameOver = false; pointer = null;
-  next = makeNext(); $('#quote').hidden = true;
+  startTurn(); hideQuote(); renderRecords();
+  next = makeNext();
   generate(true);
 }
 function checkGameOver({ afterMove = false, wasFullHeight = false } = {}) {
   const blocked = !canGenerate(blocks, next.direction);
+  const wasOver = gameOver;
   gameOver = (afterMove && isMoveGameOver(blocks, wasFullHeight, autoRowEl.checked)) || (blocked && !hasMove(blocks, bondEl.value, geometry()));
-  if (gameOver) say(`Игра окончена. Счёт: ${score}. Начните заново, чтобы попробовать ещё раз.`, true);
+  if (!gameOver) return;
+  if (wasOver) { say(`Игра окончена. Счёт: ${score}. Начните заново, чтобы попробовать ещё раз.`, true); return; }
+  const outcome = recordsEnabled ? records.submit({ score, lines }) : { record: false };
+  renderRecords();
+  say(outcome.record
+    ? `Новый рекорд: ${score} очков, ${lines} ${plural(lines, 'линия', 'линии', 'линий')}. Начните заново, чтобы попробовать ещё раз.`
+    : `Игра окончена. Счёт: ${score}. Начните заново, чтобы попробовать ещё раз.`, true);
+}
+function renderRecords() {
+  const { bestScore, bestLines, top } = records.state;
+  $('#best-score').textContent = bestScore;
+  $('#best-lines').textContent = bestLines;
+  const list = $('#record-list');
+  list.replaceChildren();
+  if (!top.length) {
+    const empty = document.createElement('li');
+    empty.className = 'record-empty';
+    empty.textContent = recordsEnabled ? 'Пока нет завершённых партий' : 'Рекорды пишутся только в игре';
+    list.append(empty);
+    return;
+  }
+  top.forEach((entry, index) => {
+    const item = document.createElement('li');
+    const place = document.createElement('span'); place.className = 'record-place'; place.textContent = `${index + 1}.`;
+    const value = document.createElement('span'); value.className = 'record-score'; value.textContent = entry.score;
+    const extra = document.createElement('span'); extra.className = 'record-lines'; extra.textContent = `${entry.lines} ${plural(entry.lines, 'линия', 'линии', 'линий')}`;
+    if (entry.date) item.title = new Date(entry.date).toLocaleString('ru-RU');
+    item.append(place, value, extra);
+    list.append(item);
+  });
 }
 async function animateResolution(initialMessage, { fromGhost = false, afterMove = false, wasFullHeight = false } = {}) {
   const action = ++epoch;
@@ -104,9 +220,14 @@ async function animateResolution(initialMessage, { fromGhost = false, afterMove 
   boardEl.classList.remove('is-burning');
   blocks = result.blocks; clearRows = []; score = baseScore + result.score; lines = baseLines + result.lines;
   busy = false;
-  if (result.lines) say(`Линии: ${result.lines} · +${result.score} очков${result.combo > 1 ? ` · комбо ×${result.combo}` : ''}`);
-  else say(initialMessage);
-  if (result.combo > 1 || result.lines > 1) showQuote();
+  const quote = accountResolution(result);
+  if (result.lines) {
+    // Когда за ход волн было несколько, сообщение показывает итог хода целиком.
+    say(turn.lines > result.lines
+      ? `За ход: ${turn.lines} ${plural(turn.lines, 'линия', 'линии', 'линий')} · +${turn.score} очков`
+      : `Линии: ${result.lines} · +${result.score} очков${result.combo > 1 ? ` · комбо ×${result.combo}` : ''}`);
+  } else say(initialMessage);
+  if (quote) showQuote();
   checkGameOver({ afterMove, wasFullHeight }); render();
   // Empty fields are unplayable: refill once in both modes, including after a
   // generation-triggered cascade. Signal place() to avoid a second auto row.
@@ -151,6 +272,7 @@ async function place() {
   const wasFullHeight = !canGenerate(blocks, next.direction);
   blocks = moveBlocks(blocks, selection.ids, selection.dx, selection.dy);
   selection = null;
+  startTurn();
   const completed = await animateResolution('Конструкция размещена.', { fromGhost: true, afterMove: true, wasFullHeight });
   if (completed && !completed.refilled && autoRowEl.checked && !gameOver) generate();
 }
@@ -228,6 +350,9 @@ function render({ fromGhost = false, fallFrames = null, duration = 220 } = {}) {
   }
   $('#next-direction').textContent = `Следующий ряд — ${next.direction === 'top' ? 'сверху ↓' : 'снизу ↑'}`;
   $('#score').textContent = score; $('#lines').textContent = `ЛИНИЙ: ${lines}`;
+  const best = records.state.bestScore;
+  $('#score-record').textContent = Math.max(best, score);
+  $('.score').classList.toggle('is-record', score > best && score > 0);
   $('#board-status').textContent = gameOver ? 'ИГРА ОКОНЧЕНА' : busy ? 'ДВИЖЕНИЕ' : selection ? 'КОНСТРУКЦИЯ ВЫБРАНА' : 'ВЫБЕРИТЕ БЛОК';
   $('.move-controls').classList.toggle('active', !!selection && !busy);
   $('#generate').disabled = gameOver || !!selection || busy;
@@ -279,7 +404,7 @@ document.addEventListener('keydown', event => {
   if (delta) { event.preventDefault(); step(...delta); }
   else if (event.key === 'Escape') cancel();
 });
-$('#place').addEventListener('click', place); $('#cancel').addEventListener('click', cancel); $('#generate').addEventListener('click', () => generate()); $('#reset').addEventListener('click', newGame);
+$('#place').addEventListener('click', place); $('#cancel').addEventListener('click', cancel); $('#generate').addEventListener('click', () => { startTurn(); generate(); }); $('#reset').addEventListener('click', newGame);
 bondEl.addEventListener('change', () => { if (selection) selection = null; $('#bond-hint').textContent = bondEl.value === 'all' ? 'При подъёме движутся все связанные блоки, в том числе снизу.' : 'Выбранный блок отделяется от нижних и забирает связанные блоки выше.'; say('Режим сцепления изменён. Выберите блок.'); checkGameOver(); render(); });
 directionEl.addEventListener('change', () => { $('#generation-hint').textContent = directionEl.value === 'bottom' ? 'Ряд появится снизу и поднимет поле.' : directionEl.value === 'top' ? 'Ряд появится сверху и упадёт вниз.' : 'Направление выбирается для каждого ряда случайно.'; newGame(); });
 lengthInputs.forEach(input => input.addEventListener('change', () => {
@@ -293,17 +418,56 @@ $('#animation-demo').addEventListener('click', () => {
   // clear again, and refill. The normal resolution path and settings are used.
   epoch++; busy = false; clearRows = []; boardEl.classList.remove('is-burning');
   score = 0; lines = 0; selection = null; gameOver = false; pointer = null;
+  startTurn(); hideQuote();
   const pieces = [
     [0, 9], [6, 9], [0, 8], [2, 8], [4, 8], [6, 8], [2, 7], [4, 7],
   ];
   blocks = pieces.map(([x, y], i) => ({ id: i + 1, x, y, length: 2 }));
-  nextId = blocks.length + 1; next = makeNext(); $('#quote').hidden = true;
+  nextId = blocks.length + 1; next = makeNext();
   boardEl.replaceChildren(); // Do not animate reused IDs from the previous game.
   boardEl.scrollIntoView?.({ behavior: 'instant', block: 'center' });
   animateResolution('Демонстрация: две линии, падение и новое поле.');
 });
-$('#quotes').addEventListener('change', event => { if (!event.target.checked) $('#quote').hidden = true; });
-$('#quote-dismiss').addEventListener('click', () => { $('#quote').hidden = true; });
+quotesCheckbox.addEventListener('change', event => {
+  saveSettings();
+  if (!event.target.checked) hideQuote();
+});
+voiceCheckbox.addEventListener('change', () => {
+  saveSettings();
+  if (!voiceCheckbox.checked) {
+    speech.stop();
+    quoteVoiceButton.textContent = '▶ Озвучить';
+  } else if (lastQuote && !quoteCard.hidden) speakQuote(lastQuote);
+});
+quoteVoiceButton.addEventListener('click', () => {
+  if (speech.speaking) {
+    speech.stop();
+    activeReveal?.finish();
+    quoteVoiceButton.textContent = '▶ Озвучить';
+    return;
+  }
+  if (lastQuote) speakQuote(lastQuote);
+});
+$('#quote-dismiss').addEventListener('click', hideQuote);
+$('#clear-records').addEventListener('click', event => {
+  const button = event.currentTarget;
+  // Два нажатия вместо всплывающего подтверждения: браузерное окно на телефоне
+  // перекрывает игру, а кнопку легко вернуть в исходное состояние.
+  if (button.dataset.confirm !== 'true') {
+    button.dataset.confirm = 'true';
+    button.textContent = 'Точно очистить рекорды?';
+    setTimeout(() => {
+      if (button.dataset.confirm === 'true') { delete button.dataset.confirm; button.textContent = 'Очистить рекорды'; }
+    }, 4000);
+    return;
+  }
+  delete button.dataset.confirm;
+  button.textContent = 'Очистить рекорды';
+  records.clear();
+  renderRecords();
+  render();
+  say('Рекорды очищены.');
+});
 $('#stud-style').addEventListener('change', event => { boardEl.classList.toggle('studs-center', event.target.value === 'center'); });
 const fullscreenButton = $('#fullscreen');
 const fullscreen = createFullscreenController(document, state => {
@@ -315,4 +479,16 @@ const fullscreen = createFullscreenController(document, state => {
   if (state.fallback) say('Браузер не разрешил полный экран. Открыт расширенный вид внутри окна.');
 });
 fullscreenButton.addEventListener('click', () => fullscreen.toggle());
+
+loadSettings();
+quoteVoiceButton.hidden = !speech.supported;
+if (!speech.supported) {
+  voiceCheckbox.checked = false;
+  voiceCheckbox.disabled = true;
+  const hint = $('#quotes-hint');
+  hint.textContent = 'Цитаты появляются, когда за ход сгорает больше одной линии. Озвучка недоступна: в этом браузере нет синтезатора речи.';
+  // В игровом режиме подсказки скрыты, но про отключённую озвучку сказать нужно.
+  hint.classList.add('is-important');
+}
+if (!recordsEnabled) $('#records-hint').textContent = 'В прототипе рекорды не сохраняются: правила настраиваются.';
 newGame();

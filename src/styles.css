@@ -73,3 +73,28 @@ body.expanded-mode{min-height:100vh;background:var(--bg)}
 /* Avoid animating blur, brightness and shadows: they can cause costly repaints. */
 @keyframes burn-line{0%{opacity:.35;transform:scaleX(.8)}35%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(1)}}
 @keyframes burn-brick{0%,35%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.9)}}
+
+/* Записи рекордов, озвучка цитат и пословное появление текста. */
+.score-record{display:block;margin-top:5px;font-size:8px;letter-spacing:.14em;color:#93a08f}
+.score-record b{color:var(--lime);font-weight:500}
+.score.is-record strong{color:#f4f8d2;text-shadow:0 0 14px #d4e39355}
+.quote-actions{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+#quote-text .quote-word{opacity:0;transform:translateY(.22em);transition:opacity .32s ease,transform .32s ease}
+#quote-text .quote-word.is-visible{opacity:1;transform:none}
+.records{border-top:1px solid var(--line);margin-top:18px;padding-top:14px}
+.records .kicker{margin-bottom:6px}
+.record-row{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:11px;color:#98a599;margin:9px 0}
+.record-row strong{font-size:15px;color:var(--lime);font-weight:500}
+.record-list{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:5px}
+.record-list li{display:grid;grid-template-columns:14px auto 1fr;gap:8px;align-items:baseline;font-size:11px;color:#c3d0bd}
+.record-list .record-place{color:#83907f}
+.record-list .record-score{color:var(--lime);font-weight:bold}
+.record-list .record-lines{color:#93a08f;font-size:10px;text-align:left}
+.record-list .record-empty{display:block;color:#8b9888;font-size:11px}
+.side-download{margin-top:18px;border-top:1px solid var(--line);padding-top:14px}
+.side-download a{color:#cbdba4;font-size:11px;text-decoration:none}
+.side-download a:hover{text-decoration:underline}
+.side-download .hint{margin-top:6px}
+@media(prefers-reduced-motion:reduce){#quote-text .quote-word{opacity:1;transform:none;transition:none}}
+@media(max-width:650px){.score-record{margin-top:3px}.record-row{font-size:10px}.record-list li{font-size:10px}}
+.play-mode .game-menu>.hint.is-important{display:block}

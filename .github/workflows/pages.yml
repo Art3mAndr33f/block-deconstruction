@@ -18,10 +18,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - run: npm test
+      # Один файл для запуска без сервера собирается заново, чтобы не устареть.
+      - run: npm run build
       - name: Prepare static site
         run: |
           mkdir -p _site
-          cp index.html manifest.webmanifest _site/
+          cp index.html manifest.webmanifest promezhutok.html _site/
           cp -R src icons _site/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

@@ -132,3 +132,270 @@ test('fall remains animated under reduced motion and uses the accelerated durati
     await ready(dom.window.document);
   } finally { dom.window.close(); Math.random = originalRandom; }
 });
+
+// ---------------------------------------------------------------------------
+// Цитаты, озвучка и рекорды
+// ---------------------------------------------------------------------------
+class FakeUtterance {
+  constructor(text) {
+    this.text = text;
+  }
+}
+
+function fakeSynth(voices = [{ name: 'Milena', lang: 'ru-RU' }]) {
+  return {
+    spoken: [],
+    paused: false,
+    cancelled: 0,
+    getVoices: () => voices,
+    speak(utterance) { this.spoken.push(utterance); },
+    cancel() { this.cancelled += 1; },
+  };
+}
+
+let tag = 0;
+// Открывает игру заново в отдельном окне: режим, генератор случайных чисел,
+// синтезатор речи и сохранённые рекорды задаются тестом.
+async function open({ search = '?mode=prototype', value = 0.45, synth = null, records = null, reduced = true } = {}) {
+  const state = { value };
+  const dom = new JSDOM(await readFile(new URL('../index.html', import.meta.url), 'utf8'), { url: `http://localhost/${search}` });
+  globalThis.window = dom.window;
+  globalThis.document = dom.window.document;
+  globalThis.location = dom.window.location;
+  globalThis.getComputedStyle = dom.window.getComputedStyle.bind(dom.window);
+  globalThis.localStorage = dom.window.localStorage;
+  dom.window.matchMedia = () => ({ matches: reduced });
+  dom.window.HTMLElement.prototype.animate = () => ({ finished: Promise.resolve() });
+  if (records) dom.window.localStorage.setItem('promezhutok.records.v1', JSON.stringify(records));
+  if (synth) {
+    globalThis.speechSynthesis = synth;
+    globalThis.SpeechSynthesisUtterance = FakeUtterance;
+  }
+  Math.random = () => state.value;
+  await import(`../src/main.js?test=extra-${tag++}`);
+  await ready(dom.window.document);
+  const $ = selector => dom.window.document.querySelector(selector);
+  const setRandom = next => { state.value = next; };
+  return { dom, $, setRandom, document: dom.window.document, window: dom.window };
+}
+
+function cleanup(dom, { synth = false } = {}) {
+  dom.window.close();
+  Math.random = originalRandom;
+  delete globalThis.localStorage;
+  if (synth) {
+    delete globalThis.speechSynthesis;
+    delete globalThis.SpeechSynthesisUtterance;
+  }
+}
+
+async function waitFor(check, timeout = 8000) {
+  for (let i = 0; i < timeout / 20; i++) {
+    if (check()) return;
+    await wait(20);
+  }
+  throw new Error('condition was not met in time');
+}
+
+const words = doc => [...doc.querySelectorAll('#quote-text .quote-word')];
+const shown = doc => words(doc).filter(word => word.classList.contains('is-visible')).length;
+
+// Ряды из семи блоков в колонках 0..6 (значение 0.45) и в колонках 1..7 (0.5).
+async function threeRows({ dom, $, setRandom, document }) {
+  for (const input of document.querySelectorAll('.length-options input')) input.checked = input.value === '1';
+  $('#direction').value = 'top';
+  $('#bond').value = 'above';
+  $('#auto-row').checked = true;
+  $('#quotes').checked = true;
+  $('#reset').click();
+  await ready(document);
+  $('#generate').click();
+  await ready(document);
+  await wait(50);
+  setRandom(0.5); // следующий ряд займёт колонки 1..7 и добьёт нижний ряд
+  $('#generate').click();
+  await ready(document);
+  await wait(50);
+  assert.equal(document.querySelectorAll('#board button.brick').length, 21);
+}
+
+test('a quote appears when one line burns before and one after the new row', async () => {
+  const game = await open();
+  try {
+    await threeRows(game);
+    const { document, $, window } = game;
+    // Верхний блок правого столбца уходит в пустую колонку 7 и заполняет нижний ряд.
+    const upper = [...document.querySelectorAll('#board button.brick')].find(el => el.style.left === '75%' && el.style.top === '70%');
+    assert.ok(upper, 'блок в колонке 6, ряду 7 не найден');
+    upper.click();
+    document.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+    document.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    $('#place').click();
+    await wait(300);
+    await ready(document);
+    await wait(300);
+    assert.equal($('#lines').textContent, 'ЛИНИЙ: 2');
+    assert.equal($('#score').textContent, '200');
+    // Одна волна до появления ряда и одна после: цитата всё равно показывается.
+    assert.equal($('#quote').hidden, false, 'цитата за ход не показана');
+    assert.match($('#quote-source').textContent, /^Дао дэ цзин, глава \d+ · вольный перевод$/);
+    assert.ok($('#quote-text').textContent.length > 20);
+    // За ход выдаётся ровно одна цитата, а не по одной на волну.
+    assert.equal(document.querySelectorAll('.quote-card').length, 1);
+    $('#quote-dismiss').click();
+    assert.equal($('#quote').hidden, true);
+  } finally {
+    cleanup(game.dom);
+  }
+});
+
+test('no quote repeats back to back, and no quote appears without a trigger', async () => {
+  const game = await open();
+  try {
+    await threeRows(game);
+    const { document, $ } = game;
+    const texts = [];
+    for (let round = 0; round < 6; round++) {
+      // Разный жребий на каждом показе: при постоянном значении выбор вырожден.
+      game.setRandom(0.1 + round * 0.15);
+      $('#animation-demo').click(); // две волны очистки за одно разрешение
+      await wait(60);
+      await ready(document);
+      await wait(120);
+      assert.equal($('#quote').hidden, false);
+      texts.push($('#quote-text').textContent);
+    }
+    // Повтор подряд невозможен: только что показанная цитата имеет нулевой вес.
+    for (let i = 1; i < texts.length; i++) {
+      assert.notEqual(texts[i], texts[i - 1], `цитата повторилась подряд: ${texts[i]}`);
+    }
+    assert.ok(new Set(texts).size >= 4, `мало разных цитат: ${new Set(texts).size}`);
+    // Цитата не появляется сама по себе: сбрасываем партию и смотрим карточку.
+    $('#reset').click();
+    await ready(document);
+    assert.equal($('#quote').hidden, true);
+  } finally {
+    cleanup(game.dom);
+  }
+});
+
+test('voiceover speaks the quote and the words follow the voice', async () => {
+  const synth = fakeSynth();
+  // Без уменьшения движения: слова должны открываться постепенно.
+  const game = await open({ synth, reduced: false });
+  try {
+    const { document, $ } = game;
+    assert.equal($('#voice').disabled, false, 'озвучка должна быть доступна с синтезатором');
+    $('#quotes').checked = true;
+    $('#voice').checked = true;
+    $('#animation-demo').click();
+    await waitFor(() => $('#quote').hidden === false);
+    assert.equal($('#quote').hidden, false);
+    const uttered = synth.spoken.at(-1);
+    assert.ok(uttered, 'синтезатор не получил текст');
+    assert.equal(uttered.lang, 'ru-RU');
+    assert.equal(uttered.voice.name, 'Milena');
+    assert.equal(uttered.text, $('#quote-text').textContent);
+    assert.equal($('#quote-voice').hidden, false);
+    assert.equal($('#quote-voice').textContent, '■ Остановить');
+
+    // Слова закрыты до первого события границы и открываются по мере речи.
+    assert.ok(words(document).length > 3);
+    assert.equal(shown(document), 0);
+    assert.equal(document.querySelector('#quote-text').textContent, uttered.text);
+    const { splitWords } = await import('../src/reveal.js');
+    const third = splitWords(uttered.text)[2].start;
+    uttered.onboundary({ charIndex: third });
+    assert.equal(shown(document), 3);
+
+    // Кнопка останавливает речь, текст при этом остаётся прочитанным.
+    const cancelled = synth.cancelled;
+    $('#quote-voice').click();
+    assert.ok(synth.cancelled > cancelled, 'кнопка не остановила речь');
+    assert.equal(synth.spoken.length, 1, 'остановка не должна запускать новую фразу');
+    assert.equal(shown(document), words(document).length);
+    assert.equal($('#quote-voice').textContent, '▶ Озвучить');
+    // Повторное нажатие читает цитату заново.
+    $('#quote-voice').click();
+    assert.equal(synth.spoken.length, 2);
+    assert.equal($('#quote-voice').textContent, '■ Остановить');
+    // Закрытие карточки останавливает речь.
+    $('#quote-dismiss').click();
+    assert.equal($('#quote').hidden, true);
+    assert.ok(synth.cancelled >= 2);
+  } finally {
+    cleanup(game.dom, { synth: true });
+  }
+});
+
+test('without the voice setting the quote is only shown, not spoken', async () => {
+  const synth = fakeSynth();
+  const game = await open({ synth, reduced: false });
+  try {
+    const { document, $ } = game;
+    $('#quotes').checked = true;
+    $('#animation-demo').click();
+    await waitFor(() => $('#quote').hidden === false);
+    assert.equal($('#quote').hidden, false);
+    assert.equal(synth.spoken.length, 0);
+    assert.equal($('#quote-voice').textContent, '▶ Озвучить');
+    // Без событий границ слова открывает резервное расписание.
+    await wait(1200);
+    assert.ok(shown(document) >= 1, 'резервное расписание не открывает слова');
+    assert.ok(shown(document) < words(document).length, 'слова открылись все сразу');
+  } finally {
+    cleanup(game.dom, { synth: true });
+  }
+});
+
+test('records saved in the browser are shown and can be cleared', async () => {
+  const stored = {
+    bestScore: 1200, bestLines: 9, games: 4, updatedAt: '2026-01-02T00:00:00.000Z',
+    top: [
+      { score: 1200, lines: 9, date: '2026-01-01T00:00:00.000Z' },
+      { score: 400, lines: 3, date: '2026-01-02T00:00:00.000Z' },
+    ],
+  };
+  const game = await open({ search: '', records: stored });
+  try {
+    const { document, $ } = game;
+    assert.equal(document.body.classList.contains('play-mode'), true);
+    assert.equal($('#best-score').textContent, '1200');
+    assert.equal($('#best-lines').textContent, '9');
+    assert.equal($('#score-record').textContent, '1200');
+    assert.equal($('#record-list').children.length, 2);
+    assert.ok($('#record-list').textContent.includes('1200'));
+    assert.ok($('#record-list').textContent.includes('9 линий'));
+    // Первое нажатие только спрашивает, второе очищает.
+    $('#clear-records').click();
+    assert.equal($('#record-list').children.length, 2);
+    assert.equal($('#best-score').textContent, '1200');
+    assert.equal($('#clear-records').textContent, 'Точно очистить рекорды?');
+    $('#clear-records').click();
+    assert.equal($('#clear-records').textContent, 'Очистить рекорды');
+    assert.equal($('#best-score').textContent, '0');
+    assert.equal($('#best-lines').textContent, '0');
+    assert.equal($('#record-list').children.length, 1);
+    assert.equal(game.dom.window.localStorage.getItem('promezhutok.records.v1'), null);
+  } finally {
+    cleanup(game.dom);
+  }
+});
+
+test('the prototype shows the records but never writes them', async () => {
+  const game = await open();
+  try {
+    const { document, $ } = game;
+    assert.equal(document.body.classList.contains('play-mode'), false);
+    assert.ok($('#records-hint').textContent.includes('прототипе'));
+    $('#animation-demo').click();
+    await wait(60);
+    await ready(document);
+    await wait(100);
+    assert.equal($('#lines').textContent, 'ЛИНИЙ: 2');
+    assert.equal($('#best-score').textContent, '0');
+    assert.equal(game.dom.window.localStorage.getItem('promezhutok.records.v1'), null);
+  } finally {
+    cleanup(game.dom);
+  }
+});
