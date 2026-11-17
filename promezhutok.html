@@ -1,0 +1,1635 @@
+<!doctype html>
+<html lang="ru">
+<!-- Промежуток: отдельный файл для запуска без сервера. Собран из index.html и src/ скриптом scripts/build-standalone.mjs. -->
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#191f1b"><meta name="apple-mobile-web-app-capable" content="yes"><title>Промежуток — игра с блоками</title>
+  <style>
+:root{color-scheme:dark;--bg:#191f1b;--line:#374139;--text:#e9ebdf;--muted:#9ba69a;--lime:#d4e393}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 Arial,sans-serif}button,select{font:inherit}button{cursor:pointer}button:disabled{cursor:not-allowed;opacity:.36}.shell{max-width:1660px;margin:auto;padding:0 5%}.topbar{height:85px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}.brand{display:flex;gap:13px;align-items:center;text-decoration:none;color:var(--text);font-size:12px;font-weight:800;letter-spacing:.13em}.brand small{display:block;margin-top:4px;font-size:8px;color:#919e8f;letter-spacing:.18em}.brand-mark{display:grid;grid-template-columns:repeat(2,7px);gap:3px;transform:rotate(-8deg)}.brand-mark i{width:7px;height:7px;background:var(--lime)}.brand-mark i:nth-child(2){opacity:.45}.top-status,.kicker,.eyebrow,.label-row,.board-top,.board-bottom,.under-board,footer{font-size:9px;letter-spacing:.14em;font-weight:700}.top-status{color:#a1ad9e}.dot{display:inline-block;width:6px;height:6px;background:var(--lime);border-radius:50%;vertical-align:middle;margin-right:7px}.bar{display:inline-block;height:14px;width:1px;background:var(--line);vertical-align:middle;margin:0 14px}.layout{display:grid;grid-template-columns:minmax(190px,.85fr) minmax(340px,1.28fr) minmax(240px,.8fr);gap:clamp(24px,3.7vw,60px);align-items:start;padding:54px 0 65px}.eyebrow{color:var(--lime);display:flex;align-items:center;gap:10px}.eyebrow span{width:22px;height:1px;background:var(--lime)}h1,h2,p{margin:0}h1,.heading h2,.future p{font-family:Georgia,serif;font-weight:400}h1{font-size:clamp(38px,3.7vw,59px);letter-spacing:-.045em;line-height:1.1;margin:24px 0}.intro h1 span{color:var(--lime)}.lead{max-width:290px;color:#a9b4a6;line-height:1.8}.how{border-top:1px solid var(--line);margin-top:42px;padding-top:20px}.label-row{display:flex;justify-content:space-between;color:#8f9b8d;margin-bottom:24px}.label-row span:last-child{color:#677267}.step{display:flex;gap:17px;margin-bottom:23px}.step b{font-family:Georgia,serif;color:#bdce91;font-weight:400;font-size:12px}.step p{color:#98a498;font-size:12px;line-height:1.65}.step strong{display:block;color:#e3e9da;font-size:13px;margin-bottom:3px}.intro-note{color:var(--lime);margin-top:37px}.intro-note span{font:italic 13px Georgia,serif;color:#b5c3a3;margin-left:8px}.heading{height:57px;display:flex;justify-content:space-between;align-items:flex-start}.kicker{color:#929f8e}.heading h2{font-size:23px;margin-top:6px}.score{text-align:right}.score span{display:block;font-size:8px;letter-spacing:.14em;color:#93a08f}.score strong{font-size:23px;color:var(--lime);font-weight:500}.board-frame{background:#232b25;border:1px solid #3b473d;padding:16px;box-shadow:0 20px 50px #10161055}.board-top,.board-bottom{display:flex;align-items:center;justify-content:space-between;color:#94a292;font-size:8px}.board-top{padding:2px 1px 14px}.board-bottom{padding:13px 1px 0}.board-bottom span:last-child{font-size:15px;color:var(--lime)}.board{position:relative;width:100%;aspect-ratio:8/10;background:#1a211c;border:1px solid #3b473b;touch-action:none;user-select:none}.grid-bg{position:absolute;inset:0;display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(10,1fr);pointer-events:none}.cell{margin:2px;background:#29332b;border:1px solid #323f33;border-radius:2px}.brick{position:absolute;border:0;padding:3px;background:transparent;touch-action:none}.brick-inner{height:100%;width:100%;display:flex;align-items:center;justify-content:space-around;border-radius:4px;background:#d3b77a;border:1px solid #efd9a4;box-shadow:inset 0 -5px 0 #0002,0 3px 5px #0004}.color-1 .brick-inner{background:#bbce85;border-color:#d7e6aa}.color-2 .brick-inner{background:#d6ab81;border-color:#eac9a5}.color-3 .brick-inner{background:#9eafa2;border-color:#c7d3c7}.color-0 .brick-inner{background:#cfbe8d;border-color:#e6d8ad}.stud{display:block;width:39%;max-width:22px;aspect-ratio:1;border-radius:50%;background:#fff3;border:1px solid #fff5;box-shadow:0 2px 0 #0003,inset 0 1px 1px #fff4}.brick.selected{opacity:.32}.brick:focus-visible .brick-inner{outline:2px solid white;outline-offset:2px}.ghost{pointer-events:none;z-index:2;animation:ghost-in .17s ease-out}.ghost .brick-inner{background:#b9c2baaa;border:1px dashed #f0f4ee;box-shadow:inset 0 -5px 0 #0002,0 0 12px #e9ffea40}.invalid{animation:invalid .3s}.message{min-height:37px;color:#a7b5a5;font-size:12px;line-height:1.4;padding-top:13px}.message.error{color:#e1a094}.move-controls{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.move-controls button{height:34px;min-width:36px;border:1px solid #4c5a4d;border-radius:3px;background:#29332b;color:#dce7d6;font-size:16px}.move-controls .place,.move-controls .cancel{font-size:11px;padding:0 12px}.move-controls .place{background:#cfdf94;color:#20281d;border-color:#cfdf94;font-weight:bold}.move-controls .cancel{background:transparent;color:#a3aea1}.under-board{display:flex;justify-content:space-between;gap:10px;margin-top:20px;font-size:9px;color:#899788;letter-spacing:.03em}.under-board span span{color:var(--lime);margin-right:6px}.sidebar{margin-top:57px;border:1px solid var(--line);padding:23px}.side-heading{display:flex;justify-content:space-between;color:#98a895}.side-heading>span:last-child{font-size:19px;line-height:10px}.side-copy,.hint{color:#98a599;font-size:12px;line-height:1.6}.side-copy{margin-top:17px}.next-row{position:relative;display:grid;grid-template-columns:repeat(8,1fr);height:35px;margin:15px 0 14px;background:#1b231d;border:1px solid #3a473b}.next-slot{border-right:1px solid #354036}.next-brick{position:absolute;top:3px;bottom:3px;padding:0 2px;display:flex;align-items:center;justify-content:space-around;border:2px solid #202a21;border-radius:4px;background:#c7d894;box-shadow:inset 0 -4px #0002}.next-brick i{height:10px;width:10px;max-width:60%;border-radius:50%;background:#fff4;border:1px solid #fff4}.primary{width:100%;padding:13px 15px;background:var(--lime);color:#20291e;border:0;border-radius:3px;font-size:12px;font-weight:bold;display:flex;justify-content:space-between;align-items:center}.primary span:last-child{font-size:18px}.hint{font-size:11px;margin-top:10px}.side-rule{border-top:1px solid var(--line);margin:25px 0}.sidebar label{display:block;font-size:11px;font-weight:bold;color:#d9e1d5;margin:19px 0 8px}.sidebar select{width:100%;padding:11px 30px 11px 10px;border:1px solid #465448;border-radius:3px;background:#28322a;color:#e4eadd;font-size:12px}.reset{border:0;background:none;padding:0;margin-top:22px;color:#c8d7a8;font-size:12px}.future{background:#2d382d;margin-top:24px;padding:18px}.future>span{color:#bbcc99;font-size:9px;font-weight:bold;letter-spacing:.1em}.future p{font-size:15px;line-height:1.5;margin:14px 0;color:#e5eadc}.future small{color:#96a693;font-size:10px}footer{border-top:1px solid var(--line);min-height:65px;display:flex;align-items:center;justify-content:space-between;gap:15px;color:#899a88;font-size:8px}footer em{font-style:normal;color:#617061}@keyframes ghost-in{from{opacity:.5}to{opacity:1}}@keyframes invalid{50%{border-color:#e38d80;box-shadow:0 0 0 2px #e38d8066}}@media(max-width:1050px){.layout{grid-template-columns:minmax(210px,.8fr) minmax(340px,1.2fr);gap:30px}.sidebar{grid-column:1/-1;margin-top:0;display:grid;grid-template-columns:1fr 1fr;gap:0 25px}.side-heading,.side-copy,.next-row,.primary,.sidebar>#generation-hint{grid-column:1}.side-rule,.sidebar>.kicker,.sidebar label,.sidebar select,.sidebar>#bond-hint,.sidebar>.hint:not(#generation-hint),.reset{grid-column:2}.side-rule{grid-row:1;margin:0}.future{grid-column:1/-1}.sidebar .primary{align-self:start}.sidebar label{margin-top:10px}}@media(max-width:650px){.shell{padding:0 18px}.topbar{height:72px}.top-status{font-size:8px}.bar{margin:0 6px}.layout{display:flex;flex-direction:column;padding:35px 0 50px;gap:35px}.intro,.play,.sidebar{width:100%}h1{font-size:43px;margin:18px 0}.how{margin-top:25px}.step{margin-bottom:15px}.intro-note{margin-top:20px}.sidebar{display:block}.side-rule{margin:25px 0}.sidebar label{margin-top:19px}.board-frame{padding:12px}.cell{margin:1px}.brick{padding:2px}footer{font-size:7px}}@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+/* Compact side-by-side play area, including tablet and phone widths. */
+.how summary{cursor:pointer;list-style:none}.how summary::-webkit-details-marker{display:none}.lengths{margin:20px 0 0;padding:0;border:0}.lengths legend{padding:0;font-size:11px;font-weight:bold;color:#d9e1d5}.length-options{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-top:8px}.sidebar .length-options label{display:flex;flex-direction:column;align-items:center;gap:4px;margin:0;padding:5px 1px;border:1px solid #465448;border-radius:3px;font-size:10px;cursor:pointer}.length-options input{margin:0;accent-color:#cddd90}.length-options label:has(input:checked){background:#394735;border-color:#94aa79}.brick-inner{position:relative}.stud{align-self:flex-start;transform:translateY(-50%);max-width:16px;background:#e4edcf;border-color:#f4f9e4;box-shadow:0 2px 0 #5c6c51,0 3px 3px #0005}.studs-center .stud{align-self:center;transform:none;max-width:22px;background:#fff3;border-color:#fff5;box-shadow:0 2px 0 #0003,inset 0 1px 1px #fff4}.clear-cell{background:#b6d48499;border-color:#e8f8c3}.clearing .brick-inner{animation:line-clear .45s ease-in-out both}.board{isolation:isolate}.brick{z-index:1}.ghost{z-index:3}@keyframes line-clear{0%{filter:brightness(1)}45%{filter:brightness(1.8);box-shadow:0 0 18px #d9f4a8}100%{filter:brightness(1.3);opacity:.45}}
+@media(max-width:1050px){.layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(200px,.65fr);gap:28px;padding-top:30px}.intro{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:0 25px}.intro h1{font-size:38px;margin:14px 0}.intro .lead{grid-column:1}.intro .how{grid-column:2;grid-row:1/5;margin:0}.intro-note{display:none}.play{grid-column:1}.sidebar{display:block;grid-column:2;margin-top:57px}.sidebar .side-rule{margin:25px 0}.sidebar label{margin:19px 0 8px}.sidebar .length-options label{margin:0}}
+@media(max-width:650px){.shell{padding:0 12px}.topbar{height:60px}.top-status{font-size:7px}.layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(125px,37%);gap:12px;padding:20px 0 40px}.intro{grid-column:1/-1;display:block}.intro h1{font-size:30px;margin:10px 0}.intro h1 br{display:none}.intro .lead{font-size:12px}.intro .how{margin-top:12px;padding-top:10px}.label-row{margin-bottom:8px}.intro .step{margin-bottom:8px}.play{grid-column:1;min-width:0}.sidebar{grid-column:2;width:auto;margin-top:47px;padding:10px;min-width:0}.heading{height:47px}.heading h2{font-size:17px}.heading .kicker{font-size:7px}.score strong{font-size:18px}.board-frame{padding:6px}.board-top,.board-bottom{font-size:6px;letter-spacing:.03em}.board-top{padding-bottom:8px}.board-bottom{padding-top:7px}.board-bottom span:first-child{max-width:80%}.message{font-size:11px;min-height:48px}.move-controls{gap:4px}.move-controls button{min-width:30px;height:30px}.move-controls .place,.move-controls .cancel{padding:0 7px}.under-board{font-size:8px}.sidebar .side-copy,.sidebar .hint{font-size:10px}.sidebar .hint{line-height:1.35}.sidebar label{font-size:10px;margin:12px 0 6px}.sidebar select{font-size:10px;padding:8px 2px}.sidebar .kicker{font-size:8px}.sidebar .side-rule{margin:15px 0}.lengths{margin-top:13px}.length-options{grid-template-columns:repeat(3,1fr)}.sidebar .length-options label{margin:0}.next-row{height:27px;margin:10px 0}.next-brick i{height:6px;width:6px}.primary{font-size:11px;padding:10px 7px}.future{padding:10px;margin-top:15px}.future p{font-size:12px}.reset{margin-top:15px}.brick{padding:1px}.brick-inner{border-radius:2px;box-shadow:inset 0 -2px #0002}.stud{max-width:8px}.studs-center .stud{max-width:13px}footer{font-size:7px}}
+/* LEGO side-view studs; the earlier top-view circles remain available in settings. */
+.brick{--stud-color:#cfbe8d;--stud-edge:#e6d8ad}
+.brick.color-1{--stud-color:#bbce85;--stud-edge:#d7e6aa}
+.brick.color-2{--stud-color:#d6ab81;--stud-edge:#eac9a5}
+.brick.color-3{--stud-color:#9eafa2;--stud-edge:#c7d3c7}
+.brick.ghost{--stud-color:#b9c2ba;--stud-edge:#f0f4ee}
+.stud{width:39%;height:6px;aspect-ratio:auto;border-radius:2px 2px 0 0;transform:translateY(-100%);background:var(--stud-color);border:1px solid var(--stud-edge);border-bottom:0;box-shadow:inset 0 1px 0 #fff5}
+.studs-center .stud{width:39%;height:auto;aspect-ratio:1;border-radius:50%;border-bottom:1px solid #fff5}
+/* The inactive strip remains visible but never suggests a second pending row. */
+.preview-strip{height:16px;position:relative;display:grid;grid-template-columns:repeat(8,1fr);background:#1a211c;border:1px solid #344034;opacity:.45}
+.preview-strip.active{opacity:1;border-color:#728468;background:#222d24}
+.preview-slot{border-right:1px solid #344034}.preview-slot:last-child{border-right:0}
+.preview-brick{position:absolute;top:2px;bottom:2px;box-sizing:border-box;border-left:2px solid #222d24;border-right:2px solid #222d24;border-radius:3px;background:#c7d894;box-shadow:inset 0 -2px #0002,inset 0 1px #e9f4cf}
+#next-top{margin-bottom:5px}#next-bottom{margin-top:5px}
+.top-actions{display:flex;align-items:center;gap:18px}
+.fullscreen-button{display:inline-flex;align-items:center;gap:7px;padding:8px 11px;border:1px solid #4b5a49;border-radius:3px;background:#263129;color:#dce7d6;font-size:11px;white-space:nowrap}
+.fullscreen-button:hover{border-color:var(--lime)}.fullscreen-button:focus-visible{outline:2px solid var(--lime);outline-offset:2px}.fullscreen-icon{font-size:17px;line-height:1}
+/* Used both in native fullscreen and when an embedded preview denies it. */
+body.expanded-mode{min-height:100vh;background:var(--bg)}
+.expanded-mode .shell{max-width:none;min-height:100vh;padding:0 3%}
+.expanded-mode .intro,.expanded-mode footer{display:none}
+.expanded-mode .topbar{height:55px}
+.expanded-mode .layout{display:grid;grid-template-columns:minmax(0,min(63vh,560px)) minmax(200px,290px);justify-content:center;align-items:start;gap:25px;padding:18px 0 30px}
+.expanded-mode .play{grid-column:1;min-width:0;width:100%}
+.expanded-mode .sidebar{display:block;grid-column:2;width:auto;margin-top:57px}
+@media(max-width:650px){.top-actions{gap:5px}.top-status{display:none}.fullscreen-button{padding:7px;font-size:10px}.preview-strip{height:12px}.preview-brick{top:1px;bottom:1px}.stud{height:4px}.studs-center .stud{height:auto}.expanded-mode .layout{grid-template-columns:minmax(0,1fr) minmax(125px,37%);gap:12px;padding-top:15px}.expanded-mode .sidebar{margin-top:47px}.expanded-mode .topbar{height:50px}}
+/* Adjacent rows meet edge-to-edge. Lower studs overlap the foot of the brick above. */
+.brick{padding:0 2px}
+.brick-inner{border-radius:2px;box-shadow:inset 0 -3px 0 #0002,0 1px 2px #0003}
+.stud{height:6px;position:relative}
+@media(max-width:650px){.brick{padding:0 1px}.stud{height:4px}.studs-center .stud{height:auto}}
+.board{--stud-height:6px}
+.stud{height:var(--stud-height)}
+.sidebar .auto-row{display:flex;align-items:flex-start;gap:8px;margin:19px 0 4px;font-weight:600;line-height:1.45;cursor:pointer}
+.auto-row input{accent-color:#cddd90;margin:1px 0 0;flex:none}
+@media(max-width:650px){.board{--stud-height:4px}.sidebar .auto-row{margin:12px 0 4px}}
+/* Studs share the same cell-centred geometry as collision detection. */
+.board{--stud-max-width:16px;--brick-inset:3px}
+.brick-inner{display:grid;grid-template-columns:repeat(var(--brick-length),minmax(0,1fr));align-items:start}
+.stud{justify-self:center;width:39%;max-width:var(--stud-max-width)}
+.studs-center .stud{align-self:center}
+@media(max-width:650px){.board{--stud-max-width:8px;--brick-inset:2px}}
+.burn-line{position:absolute;left:0;width:100%;z-index:60;pointer-events:none;background:linear-gradient(90deg,transparent,#f4d77c99 20%,#fff9c9dd 50%,#f2a964aa 80%,transparent);box-shadow:0 0 20px #ffcd78aa;animation:burn-line 850ms ease-in forwards}
+.clearing .brick-inner{animation:burn-brick 850ms ease-in forwards}
+@keyframes burn-line{0%{opacity:.3;transform:scaleX(.7)}45%{opacity:1;transform:scaleX(1)}100%{opacity:0;filter:blur(3px)}}
+@keyframes burn-brick{0%{filter:brightness(1)}40%{filter:brightness(2);box-shadow:0 0 18px #ffc970}100%{filter:brightness(1.6);opacity:0;transform:scale(.9)}}
+.mode-link{color:#cbdba4;text-decoration:none;font-size:11px;white-space:nowrap}.mode-link:hover{text-decoration:underline}
+#fall-speed{width:100%;accent-color:#cddd90}.game-menu{border-top:1px solid var(--line);margin-top:22px;padding-top:18px}.game-menu .reset{margin-top:14px}.quote-card{margin-top:16px;padding:16px;background:#303c2f;border-left:2px solid var(--lime)}.quote-card[hidden]{display:none}.quote-card blockquote{margin:0 0 10px;font:16px/1.5 Georgia,serif}.quote-card cite{display:block;font:normal 10px/1.4 Arial,sans-serif;color:#b4c4aa}.quote-card button{padding:0;border:0;background:none;color:var(--lime);font-size:11px;margin-top:12px}
+/* The player version keeps the board and a small side menu; the prototype remains available separately. */
+.play-mode .intro,.play-mode footer,.play-mode .prototype-controls,.play-mode .future,.play-mode .board-bottom,.play-mode .under-board{display:none}
+.play-mode .shell{max-width:1250px}.play-mode .layout{display:grid;grid-template-columns:minmax(0,min(60vh,510px)) minmax(170px,230px);justify-content:center;align-items:start;gap:32px;padding:30px 0}
+.play-mode .play{grid-column:1;min-width:0;width:100%}.play-mode .sidebar{display:block;grid-column:2;margin-top:57px;padding:20px}.play-mode .game-menu{border:0;margin:0;padding:0}.play-mode .message{min-height:35px}.play-mode .move-controls:not(.active){display:none}
+@media(max-width:650px){.mode-link{font-size:10px}.play-mode .shell{padding:0 14px}.play-mode .topbar{height:54px}.play-mode .layout{grid-template-columns:minmax(0,1fr);gap:12px;padding:14px 0}.play-mode .play{grid-column:1;width:min(100%,calc((100dvh - 185px) * .8));min-width:min(100%,240px);justify-self:center}.play-mode .sidebar{grid-column:1;width:min(100%,420px);justify-self:center;margin:0;padding:12px}.play-mode .game-menu .reset{margin:8px 14px 0 0}.play-mode .game-menu .quote-setting{display:inline-flex;margin:8px 0 0}.play-mode .game-menu>.hint{display:none}.play-mode .heading{height:43px}.play-mode .message{min-height:28px;padding-top:6px}.play-mode .board-frame{padding:7px}}
+@media(prefers-reduced-motion:reduce){.burn-line,.clearing .brick-inner{animation-duration:.01ms!important}}
+/* In the alternate circular style the functional upper studs remain visible. */
+.studs-center .brick-inner::before{content:"";position:absolute;left:0;right:0;top:calc(-1 * var(--stud-height));height:var(--stud-height);background-image:linear-gradient(to right,transparent calc(50% - min(19.5%,8px)),var(--stud-color) 0 calc(50% + min(19.5%,8px)),transparent 0);background-size:calc(100% / var(--brick-length)) 100%;background-repeat:repeat-x}
+@media(max-width:650px){.studs-center .brick-inner::before{background-image:linear-gradient(to right,transparent calc(50% - min(19.5%,4px)),var(--stud-color) 0 calc(50% + min(19.5%,4px)),transparent 0)}}
+
+/* The player can recognise a completed row before the burn begins. */
+#burn-duration{width:100%;accent-color:#cddd90}
+.burn-line{animation:none;opacity:.55}
+.clearing .brick-inner{animation:none;outline:2px solid #fff1b4;box-shadow:0 0 12px #ffc970}
+.board.is-burning .burn-line{animation:burn-line var(--burn-duration,1200ms) ease-in forwards}
+.board.is-burning .clearing .brick-inner{animation:burn-brick var(--burn-duration,1200ms) ease-in forwards}
+@media(prefers-reduced-motion:reduce){
+  .board.is-burning .burn-line,.board.is-burning .clearing .brick-inner{animation:none;opacity:1}
+}
+/* Avoid animating blur, brightness and shadows: they can cause costly repaints. */
+@keyframes burn-line{0%{opacity:.35;transform:scaleX(.8)}35%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(1)}}
+@keyframes burn-brick{0%,35%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.9)}}
+
+/* Записи рекордов, озвучка цитат и пословное появление текста. */
+.score-record{display:block;margin-top:5px;font-size:8px;letter-spacing:.14em;color:#93a08f}
+.score-record b{color:var(--lime);font-weight:500}
+.score.is-record strong{color:#f4f8d2;text-shadow:0 0 14px #d4e39355}
+.quote-actions{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+#quote-text .quote-word{opacity:0;transform:translateY(.22em);transition:opacity .32s ease,transform .32s ease}
+#quote-text .quote-word.is-visible{opacity:1;transform:none}
+.records{border-top:1px solid var(--line);margin-top:18px;padding-top:14px}
+.records .kicker{margin-bottom:6px}
+.record-row{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:11px;color:#98a599;margin:9px 0}
+.record-row strong{font-size:15px;color:var(--lime);font-weight:500}
+.record-list{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:5px}
+.record-list li{display:grid;grid-template-columns:14px auto 1fr;gap:8px;align-items:baseline;font-size:11px;color:#c3d0bd}
+.record-list .record-place{color:#83907f}
+.record-list .record-score{color:var(--lime);font-weight:bold}
+.record-list .record-lines{color:#93a08f;font-size:10px;text-align:left}
+.record-list .record-empty{display:block;color:#8b9888;font-size:11px}
+.side-download{margin-top:18px;border-top:1px solid var(--line);padding-top:14px}
+.side-download a{color:#cbdba4;font-size:11px;text-decoration:none}
+.side-download a:hover{text-decoration:underline}
+.side-download .hint{margin-top:6px}
+@media(prefers-reduced-motion:reduce){#quote-text .quote-word{opacity:1;transform:none;transition:none}}
+@media(max-width:650px){.score-record{margin-top:3px}.record-row{font-size:10px}.record-list li{font-size:10px}}
+.play-mode .game-menu>.hint.is-important{display:block}
+
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="topbar"><a class="brand" href="./"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span>ПРОМЕЖУТОК <small>ИГРА В ПРОЦЕССЕ</small></span></a><div class="top-actions"><a class="mode-link" id="mode-link" href="?mode=prototype">Прототип ↗</a><div class="top-status"><span class="dot"></span> ИГРОВОЙ ПРОТОТИП <span class="bar"></span> 02 / ДВИЖЕНИЕ</div><button id="fullscreen" class="fullscreen-button" type="button" aria-pressed="false" aria-label="На весь экран"><span class="fullscreen-icon" aria-hidden="true">⛶</span><span class="fullscreen-label">На весь экран</span></button></div></header>
+  <main class="layout">
+    <section class="intro"><div class="eyebrow"><span></span> МЕСТО ДЛЯ МЫСЛЕЙ</div><h1>Собирайте.<br>Отпускайте<span>.</span></h1><p class="lead">Небольшая игра о блоках, равновесии и пространстве для нового.</p>
+      <details class="how"><summary class="label-row"><span>КАК ИГРАТЬ</span><span>01 — 03 &nbsp; +</span></summary><div class="step"><b>01</b><p><strong>Выберите блок</strong>Нажмите на него, чтобы выделить конструкцию.</p></div><div class="step"><b>02</b><p><strong>Приподнимите</strong>Разъедините выступы и перемещайте блок в свободном пространстве.</p></div><div class="step"><b>03</b><p><strong>Найдите место</strong>Отпустите блоки или нажмите «Разместить». Полная линия исчезнет.</p></div></details>
+      <div class="intro-note">✳ <span>Неспешно. Ход за ходом.</span></div>
+    </section>
+    <section class="play" aria-labelledby="board-title"><div class="heading"><div><div class="kicker">ИГРОВОЕ ПРОСТРАНСТВО</div><h2 id="board-title">Поле возможностей</h2></div><div class="score"><span>СЧЁТ</span><strong id="score">0</strong><span class="score-record">РЕКОРД <b id="score-record">0</b></span></div></div>
+      <div class="board-frame"><div class="board-top"><span><span class="dot"></span> <span id="board-status">ВЫБЕРИТЕ БЛОК</span></span><span>8 × 10</span></div><div id="next-top" class="preview-strip" role="img" aria-label="Сверху следующий ряд не появится"></div><div id="board" class="board" role="group" aria-label="Игровое поле: 8 столбцов и 10 рядов"></div><div id="next-bottom" class="preview-strip" role="img" aria-label="Снизу следующий ряд не появится"></div><div class="board-bottom"><span>БЛОКИ СОЕДИНЯЮТСЯ СВЕРХУ И СНИЗУ</span><span>✳</span></div></div>
+      <div class="message" id="message" role="status" aria-live="polite">Выберите блок, чтобы начать движение.</div>
+      <div class="move-controls" aria-label="Управление выбранной конструкцией"><button type="button" id="place" class="place">Разместить</button><button type="button" id="cancel" class="cancel">Отмена</button></div>
+      <div class="under-board"><span><span>✳</span> Каждый ход создаёт пространство.</span><span id="lines">ЛИНИЙ: 0</span></div>
+    </section>
+    <aside class="sidebar"><div class="prototype-controls"><div class="side-heading"><span class="kicker">СЛЕДУЮЩИЙ РЯД</span><span>↗</span></div><p class="side-copy" id="next-direction">Следующий ряд — снизу</p><button class="primary" id="generate" type="button"><span>Добавить ряд</span><span>＋</span></button><p class="hint" id="generation-hint">Ряд появится снизу и поднимет поле.</p>
+      <div class="side-rule"></div><div class="kicker">НАСТРОЙКИ ПРОТОТИПА</div><label for="bond">Сцепление</label><select id="bond"><option value="all">Вся конструкция</option><option value="above">Только выбранный и выше</option></select><p class="hint" id="bond-hint">При подъёме движутся все связанные блоки, в том числе снизу.</p><label for="direction">Новые блоки</label><select id="direction"><option value="bottom">Появляются снизу</option><option value="top">Появляются сверху</option><option value="random">Случайно: сверху или снизу</option></select><p class="hint">Переключение начнёт новую игру.</p><label class="auto-row"><input type="checkbox" id="auto-row"> Добавлять ряд после каждого хода</label><fieldset class="lengths"><legend>Длины новых блоков</legend><div class="length-options"><label><input type="checkbox" value="1" checked> 1</label><label><input type="checkbox" value="2" checked> 2</label><label><input type="checkbox" value="3" checked> 3</label><label><input type="checkbox" value="4" checked> 4</label><label><input type="checkbox" value="5"> 5</label><label><input type="checkbox" value="6"> 6</label></div></fieldset><p class="hint">Оставьте хотя бы один размер. Следующий ряд обновится.</p><label for="stud-style">Вид сцепления</label><select id="stud-style"><option value="top">Выступы сверху</option><option value="center">Кружочки на блоке</option></select><label for="fall-speed">Скорость падения: <output id="fall-speed-value">15</output> клеток/с</label><input id="fall-speed" type="range" min="0.5" max="20" value="15" step="0.5"><label for="burn-duration">Сгорание: <output id="burn-duration-value">1.2</output> с</label><input id="burn-duration" type="range" min="0.6" max="2" value="1.2" step="0.1"><button id="animation-demo" class="reset" type="button">▶ Посмотреть анимацию</button><p class="hint">Демонстрация сбросит текущую партию и покажет одинаковый каскад для сравнения настроек.</p></div><div class="game-menu"><div class="kicker">МЕНЮ</div><button type="button" class="reset" id="reset">↻ &nbsp; Начать заново</button><label class="auto-row quote-setting"><input type="checkbox" id="quotes"> Показывать цитаты</label><label class="auto-row quote-setting"><input type="checkbox" id="voice"> Озвучивать цитаты</label><p class="hint" id="quotes-hint">Цитаты появляются, когда за ход сгорает больше одной линии. Озвучка зависит от голосов браузера.</p><div id="quote" class="quote-card" hidden><blockquote id="quote-text"></blockquote><cite id="quote-source"></cite><div class="quote-actions"><button type="button" id="quote-voice" hidden>▶ Озвучить</button><button type="button" id="quote-dismiss">Закрыть</button></div></div><div class="records"><div class="kicker">РЕКОРДЫ</div><div class="record-row"><span>Лучший счёт</span><strong id="best-score">0</strong></div><div class="record-row"><span>Больше всего линий</span><strong id="best-lines">0</strong></div><ol class="record-list" id="record-list"></ol><p class="hint" id="records-hint">Рекорды хранятся в этом браузере.</p><button type="button" class="reset" id="clear-records">Очистить рекорды</button></div><div class="side-download"><a id="download-link" href="./promezhutok.html" download>Скачать игру одним файлом ↗</a><p class="hint">Открывается двойным щелчком, без сервера и установки.</p></div></div>
+      <div class="future"><span>✳ &nbsp; МЫСЛЬ НА БУДУЩЕЕ</span><p>Мудрость не торопится.<br>И игра тоже.</p><small>Цитаты появятся в следующих версиях.</small></div>
+    </aside>
+  </main><footer><span>ПРОМЕЖУТОК <em>/ ИГРА В ПРОЦЕССЕ</em></span><span>СОЗДАНО ДЛЯ ВНИМАНИЯ &nbsp; ✳</span></footer>
+</div>
+<script>
+(function () {
+  "use strict";
+  const __modules = Object.create(null);
+  const __require = name => {
+    const module = __modules[name];
+    if (!module) throw new Error("модуль не загружен: " + name);
+    return module;
+  };
+  __modules["board"] = (() => {
+    const BOARD_COLUMNS = 8;
+    const BOARD_ROWS = 10;
+    
+    function createEmptyBoard() {
+      return Array.from({ length: BOARD_ROWS }, () => Array(BOARD_COLUMNS).fill(null));
+    }
+    
+    // A block occupies one horizontal row. IDs identify bricks, not connected groups.
+    function cellsFor(blocks) {
+      const board = createEmptyBoard();
+      for (const block of blocks) {
+        for (let x = block.x; x < block.x + block.length; x++) board[block.y][x] = block.id;
+      }
+      return board;
+    }
+    
+    function makeRow(random = Math.random, allowed = [1, 2, 3, 4]) {
+      const lengths = [...new Set(allowed)].filter(n => Number.isInteger(n) && n >= 1 && n <= 6);
+      if (!lengths.length) throw new RangeError('At least one block length must be enabled');
+      const occupied = Array(BOARD_COLUMNS).fill(false);
+      const result = [];
+      let used = 0;
+      while (true) {
+        // Choose a length first so larger bricks are not drowned out by many short positions.
+        const choices = lengths.map(length => ({
+          length,
+          positions: Array.from({ length: BOARD_COLUMNS - length + 1 }, (_, x) => x)
+            .filter(x => used + length < BOARD_COLUMNS && occupied.slice(x, x + length).every(cell => !cell))
+        })).filter(choice => choice.positions.length);
+        if (!choices.length || (result.length && random() < 0.4)) break;
+        const choice = choices[Math.floor(random() * choices.length)];
+        const x = choice.positions[Math.floor(random() * choice.positions.length)];
+        result.push({ x, length: choice.length });
+        occupied.fill(true, x, x + choice.length);
+        used += choice.length;
+      }
+      return result.sort((a, b) => a.x - b.x);
+    }
+    
+    function touchesVertically(a, b) {
+      return Math.abs(a.y - b.y) === 1 && a.x < b.x + b.length && b.x < a.x + a.length;
+    }
+    
+    // 'all' carries the whole connected construction; 'above' detaches from everything below.
+    function connectedIds(blocks, id, mode = 'all') {
+      const selected = blocks.find(block => block.id === id);
+      if (!selected) return new Set();
+      const ids = new Set([id]);
+      const queue = [selected];
+      while (queue.length) {
+        const current = queue.shift();
+        for (const other of blocks) {
+          if (!ids.has(other.id) && touchesVertically(current, other) &&
+              (mode === 'all' || other.y < current.y)) {
+            ids.add(other.id);
+            queue.push(other);
+          }
+        }
+      }
+      return ids;
+    }
+    
+    function canMove(blocks, ids, dx, dy) {
+      const board = cellsFor(blocks);
+      return blocks.filter(b => ids.has(b.id)).every(block => {
+        const y = block.y + dy;
+        const x = block.x + dx;
+        if (y < 0 || y >= BOARD_ROWS || x < 0 || x + block.length > BOARD_COLUMNS) return false;
+        for (let col = x; col < x + block.length; col++) {
+          if (board[y][col] !== null && !ids.has(board[y][col])) return false;
+        }
+        return true;
+      });
+    }
+    
+    function moveBlocks(blocks, ids, dx, dy) {
+      return blocks.map(b => ids.has(b.id) ? { ...b, x: b.x + dx, y: b.y + dy } : { ...b });
+    }
+    
+    // Recalculate components on every gravity step. All free components advance together;
+    // components cannot attach to one another halfway through an individual step.
+    function settle(blocks, onStep = () => {}) {
+      let current = blocks.map(b => ({ ...b }));
+      while (true) {
+        const groups = [];
+        const owners = new Map();
+        for (const block of current) {
+          if (owners.has(block.id)) continue;
+          const ids = connectedIds(current, block.id);
+          const index = groups.length;
+          groups.push(ids);
+          for (const id of ids) owners.set(id, index);
+        }
+        const board = cellsFor(current);
+        const blocked = new Set();
+        for (const b of current) if (b.y === BOARD_ROWS - 1) blocked.add(owners.get(b.id));
+        let changed = true;
+        while (changed) {
+          changed = false;
+          for (const b of current) {
+            const group = owners.get(b.id);
+            if (blocked.has(group) || b.y === BOARD_ROWS - 1) continue;
+            for (let x = b.x; x < b.x + b.length; x++) {
+              const below = board[b.y + 1][x];
+              if (below !== null && owners.get(below) !== group && blocked.has(owners.get(below))) {
+                blocked.add(group); changed = true; break;
+              }
+            }
+          }
+        }
+        const moving = new Set();
+        groups.forEach((ids, i) => { if (!blocked.has(i)) for (const id of ids) moving.add(id); });
+        if (!moving.size) return current;
+        current = moveBlocks(current, moving, 0, 1);
+        onStep(current);
+      }
+    }
+    
+    // Trace is optional: gameplay can replay each simultaneous fall and clear, while
+    // move searches use the exact same physics without allocating animation frames.
+    function resolveBoard(blocks, { trace = false } = {}) {
+      let current = blocks.map(b => ({ ...b }));
+      let score = 0, lines = 0, combo = 0;
+      const frames = [];
+      const snapshot = (type, state, rows = []) => {
+        if (trace) frames.push({ type, blocks: state.map(b => ({ ...b })), rows: [...rows], score, lines, combo });
+      };
+      while (true) {
+        const board = cellsFor(current);
+        const full = new Set(board.flatMap((row, y) => row.every(cell => cell !== null) ? [y] : []));
+        if (!full.size) {
+          const settled = settle(current, step => snapshot('fall', step));
+          if (settled.every((b, i) => b.y === current[i].y)) break;
+          current = settled;
+          continue;
+        }
+        combo++;
+        lines += full.size;
+        score += full.size * 100 * combo;
+        snapshot('clear', current, full);
+        current = current.filter(block => !full.has(block.y));
+        snapshot('remove', current);
+        current = settle(current, step => snapshot('fall', step));
+      }
+      return { blocks: current, score, lines, combo, ...(trace ? { frames } : {}) };
+    }
+    
+    function canGenerate(blocks, direction) {
+      return !blocks.some(b => b.y === 0); // bottom pushes upward; top needs an empty entry row
+    }
+    
+    function addRow(blocks, row, direction, nextId) {
+      if (!canGenerate(blocks, direction)) return null;
+      const shifted = blocks.map(b => ({ ...b, y: b.y - (direction === 'bottom' ? 1 : 0) }));
+      const y = direction === 'bottom' ? BOARD_ROWS - 1 : 0;
+      return [...shifted, ...row.map((piece, i) => ({ ...piece, y, id: nextId + i }))];
+    }
+    
+    // A top row occupied before and after a committed move is terminal. In automatic
+    // mode an occupied top row after any move also prevents the required next row.
+    function isMoveGameOver(blocks, wasFullHeight, autoRow) {
+      return !canGenerate(blocks) && (wasFullHeight || autoRow);
+    }
+    
+    return { BOARD_COLUMNS, BOARD_ROWS, createEmptyBoard, cellsFor, makeRow, connectedIds, canMove, moveBlocks, settle, resolveBoard, canGenerate, addRow, isMoveGameOver };
+  })();
+  __modules["fullscreen"] = (() => {
+    /** Native fullscreen when available; a clearly labelled viewport-sized fallback otherwise. */
+    function createFullscreenController(doc, onChange) {
+      let fallback = false;
+      const notify = () => onChange({ native: !!doc.fullscreenElement, fallback, active: !!doc.fullscreenElement || fallback });
+      doc.addEventListener('fullscreenchange', () => { if (doc.fullscreenElement) fallback = false; notify(); });
+      async function toggle() {
+        if (doc.fullscreenElement) {
+          try { await doc.exitFullscreen(); } catch { /* Keep the actual state if exiting fails. */ }
+          notify();
+        } else if (fallback) {
+          fallback = false;
+          notify();
+        } else {
+          try {
+            if (!doc.fullscreenEnabled || !doc.documentElement.requestFullscreen) throw new Error('Fullscreen unavailable');
+            await doc.documentElement.requestFullscreen();
+            // Some embedded browsers resolve the request without granting fullscreen.
+            if (!doc.fullscreenElement) fallback = true;
+          } catch {
+            fallback = true;
+          }
+          notify();
+        }
+      }
+      function exitFallback() {
+        if (!fallback) return false;
+        fallback = false;
+        notify();
+        return true;
+      }
+      notify();
+      return { toggle, exitFallback };
+    }
+    
+    return { createFullscreenController };
+  })();
+  __modules["drag"] = (() => {
+    const { BOARD_COLUMNS, BOARD_ROWS, connectedIds, moveBlocks, resolveBoard } = __require("board");
+    
+    const EPS = 1e-7;
+    const DEFAULT_STUDS = { height: 0.12, maxWidth: 0.32, inset: 0.04 };
+    const overlap = (a0, a1, b0, b1) => a0 < b1 - EPS && a1 > b0 + EPS;
+    
+    // Stud geometry matches the per-cell centred studs used by the renderer.
+    function shapes(block, dx, dy, studs) {
+      const x = block.x + dx, y = block.y + dy;
+      const result = [{ left: x, right: x + block.length, top: y, bottom: y + 1, kind: 'body' }];
+      if (studs.height <= 0) return result;
+      const innerWidth = Math.max(0, block.length - 2 * studs.inset);
+      const step = innerWidth / block.length;
+      const width = Math.min(studs.maxWidth, step * 0.39);
+      for (let i = 0; i < block.length; i++) {
+        const center = x + studs.inset + (i + 0.5) * step;
+        result.push({ left: center - width / 2, right: center + width / 2, top: y - studs.height, bottom: y, kind: 'stud' });
+      }
+      return result;
+    }
+    
+    // Body-only occupancy is used for grid placement: studs may be inserted into a
+    // vertically adjacent brick at rest, but solid brick bodies cannot overlap.
+    function canPreview(blocks, ids, dx, dy) {
+      const moving = blocks.filter(b => ids.has(b.id)), fixed = blocks.filter(b => !ids.has(b.id));
+      return moving.every(b => {
+        const x = b.x + dx, y = b.y + dy;
+        return x >= -EPS && x + b.length <= BOARD_COLUMNS + EPS && y >= -EPS && y + 1 <= BOARD_ROWS + EPS &&
+          fixed.every(o => !overlap(x, x + b.length, o.x, o.x + o.length) || !overlap(y, y + 1, o.y, o.y + 1));
+      });
+    }
+    
+    // Axis-aligned swept collision against bodies and protruding studs. Existing
+    // interlocked studs may move vertically out of their socket, never sideways.
+    function sweepAxis(blocks, ids, position, axis, target, studs = DEFAULT_STUDS, bodiesOnly = false) {
+      const requested = target - position[axis];
+      if (Math.abs(requested) < EPS) return position[axis];
+      let distance = requested;
+      const fixed = blocks.filter(b => !ids.has(b.id));
+      for (const b of blocks.filter(b => ids.has(b.id))) {
+        const x = b.x + position.x, y = b.y + position.y;
+        const edge = axis === 'x' ? (requested > 0 ? BOARD_COLUMNS - x - b.length : -x) : (requested > 0 ? BOARD_ROWS - y - 1 : -y);
+        distance = requested > 0 ? Math.min(distance, edge) : Math.max(distance, edge);
+        const movingShapes = shapes(b, position.x, position.y, bodiesOnly ? { ...studs, height: 0 } : studs);
+        for (const other of fixed) {
+          const fixedShapes = shapes(other, 0, 0, bodiesOnly ? { ...studs, height: 0 } : studs);
+          for (const m of movingShapes) for (const f of fixedShapes) {
+            const perpendicular = axis === 'x' ? overlap(m.top, m.bottom, f.top, f.bottom) : overlap(m.left, m.right, f.left, f.right);
+            if (!perpendicular) continue;
+            const m0 = axis === 'x' ? m.left : m.top, m1 = axis === 'x' ? m.right : m.bottom;
+            const f0 = axis === 'x' ? f.left : f.top, f1 = axis === 'x' ? f.right : f.bottom;
+            if (overlap(m0, m1, f0, f1)) {
+              // Only already-engaged studs can overlap at the start. Allow vertical
+              // separation, but do not allow horizontal sliding through the joint.
+              const separating = axis === 'y' && ((m.kind === 'body' && f.kind === 'stud' && requested < 0) || (m.kind === 'stud' && f.kind === 'body' && requested > 0));
+              if (!separating) distance = 0;
+              continue;
+            }
+            const gap = requested > 0 ? f0 - m1 : f1 - m0;
+            if (requested > 0 && gap >= -EPS) distance = Math.min(distance, Math.max(0, gap));
+            if (requested < 0 && gap <= EPS) distance = Math.max(distance, Math.min(0, gap));
+          }
+        }
+      }
+      return position[axis] + distance;
+    }
+    
+    function dragPosition(blocks, ids, position, target, studs = DEFAULT_STUDS) {
+      const next = { ...position };
+      if (target.y < next.y) next.y = sweepAxis(blocks, ids, next, 'y', target.y, studs);
+      next.x = sweepAxis(blocks, ids, next, 'x', target.x, studs);
+      next.y = sweepAxis(blocks, ids, next, 'y', target.y, studs);
+    
+      // A one-cell opening requires exact alignment in the physics model. Guide a
+      // nearby ghost to the grid centre only when doing so is collision-free and
+      // actually lets it travel farther in the requested vertical direction.
+      if (Math.abs(target.y - next.y) > EPS) {
+        const alignedX = Math.round(next.x);
+        if (Math.abs(alignedX - next.x) <= 0.4 + EPS) {
+          const reachedX = sweepAxis(blocks, ids, next, 'x', alignedX, studs);
+          if (Math.abs(reachedX - alignedX) < EPS) {
+            const aligned = { x: alignedX, y: next.y };
+            const reachedY = sweepAxis(blocks, ids, aligned, 'y', target.y, studs);
+            if (Math.abs(target.y - reachedY) + EPS < Math.abs(target.y - next.y)) {
+              return { x: alignedX, y: reachedY };
+            }
+          }
+        }
+      }
+      // A vertical movement can also free the studs for a sideways movement in
+      // this same pointer event; never bypass the normal swept collision checks.
+      next.x = sweepAxis(blocks, ids, next, 'x', target.x, studs);
+      return next;
+    }
+    
+    // A final vertical insertion of at most one stud height may engage a socket.
+    function travelTo(blocks, ids, start, candidate, axes, studs) {
+      const path = { ...start };
+      for (const axis of axes) {
+        const dest = candidate[axis];
+        let actual = sweepAxis(blocks, ids, path, axis, dest, studs);
+        if (axis === 'y' && Math.abs(actual - dest) <= studs.height + EPS) {
+          const bodyEnd = sweepAxis(blocks, ids, path, axis, dest, studs, true);
+          if (Math.abs(bodyEnd - dest) < EPS) actual = dest;
+        }
+        path[axis] = actual;
+        if (Math.abs(actual - dest) > EPS) return false;
+      }
+      return true;
+    }
+    
+    function snapOffset(blocks, ids, position, studs = DEFAULT_STUDS) {
+      const candidates = [];
+      for (let y = -BOARD_ROWS; y <= BOARD_ROWS; y++) for (let x = -BOARD_COLUMNS; x <= BOARD_COLUMNS; x++) {
+        if (canPreview(blocks, ids, x, y)) candidates.push({ x, y });
+      }
+      candidates.sort((a, b) => (a.x - position.x) ** 2 + (a.y - position.y) ** 2 - ((b.x - position.x) ** 2 + (b.y - position.y) ** 2));
+      return candidates.find(candidate => travelTo(blocks, ids, position, candidate, ['x', 'y'], studs) || travelTo(blocks, ids, position, candidate, ['y', 'x'], studs)) ?? null;
+    }
+    
+    // Search reachable placements, including extraction downwards and sideways in
+    // open space. Uses the same stud collisions as pointer dragging.
+    function hasMove(blocks, mode, studs = DEFAULT_STUDS) {
+      const groups = new Set();
+      for (const block of blocks) {
+        const ids = connectedIds(blocks, block.id, mode);
+        const key = [...ids].sort((a, b) => a - b).join(',');
+        if (groups.has(key)) continue;
+        groups.add(key);
+        const queue = [{ x: 0, y: 0 }], visited = new Set(['0,0']);
+        for (let i = 0; i < queue.length; i++) {
+          const pos = queue[i];
+          if (pos.x || pos.y) {
+            const result = resolveBoard(moveBlocks(blocks, ids, pos.x, pos.y));
+            if (result.lines || result.blocks.some((b, n) => b.x !== blocks[n].x || b.y !== blocks[n].y)) return true;
+          }
+          for (const [dx, dy] of [[0, -1], [0, 1], [-1, 0], [1, 0]]) {
+            const next = { x: pos.x + dx, y: pos.y + dy }, k = `${next.x},${next.y}`;
+            if (!visited.has(k) && canPreview(blocks, ids, next.x, next.y) && travelTo(blocks, ids, pos, next, dx ? ['x'] : ['y'], studs)) {
+              visited.add(k); queue.push(next);
+            }
+          }
+        }
+      }
+      return false;
+    }
+    
+    return { BOARD_COLUMNS, BOARD_ROWS, connectedIds, moveBlocks, resolveBoard, DEFAULT_STUDS, canPreview, sweepAxis, dragPosition, snapOffset, hasMove };
+  })();
+  __modules["motion"] = (() => {
+    // Consecutive physics steps belong to one uninterrupted fall, but clear/remove
+    // frames remain separate so the player can see exactly what disappeared.
+    function collectFallFrames(frames, index, startBlocks) {
+      const positions = [startBlocks];
+      while (index < frames.length && frames[index].type === 'fall') positions.push(frames[index++].blocks);
+      return { positions, nextIndex: index };
+    }
+    
+    // Every step has the same duration. A brick that lands early stays in place in
+    // later keyframes while the remaining unsupported bricks continue falling.
+    function fallKeyframes(positions, id, cellHeight) {
+      const points = positions.map(frame => frame.find(block => block.id === id));
+      if (points.length < 2 || !points.every(Boolean) || points.every(point => point.y === points.at(-1).y)) return [];
+      const last = points.at(-1);
+      return points.map((point, i) => ({ transform: `translateY(${(point.y - last.y) * cellHeight}px)`, offset: i / (points.length - 1) }));
+    }
+    
+    return { collectFallFrames, fallKeyframes };
+  })();
+  __modules["quotes"] = (() => {
+    // Цитаты «Дао дэ цзин»: короткие вольные пересказы древнего текста (оригинал —
+    // общественное достояние). Это не издания чьего-либо перевода: формулировки
+    // сделаны для игры и указаны с номером главы, чтобы мысль можно было проверить.
+    // Права: при добавлении новых цитат проверять права на конкретный перевод и не
+    // приписывать автору выдуманные строки.
+    //
+    // `themes` — небольшая метка смысла. Она нужна адаптивному распределению: цитаты
+    // с близкими метками считаются близкими по смыслу (см. `themeSimilarity`).
+    
+    const THEMES = ['путь', 'молчание', 'равновесие', 'мера', 'покой', 'мягкость', 'пустота', 'простота', 'мастерство', 'мудрость'];
+    
+    const taoTeChing = [
+      { id: 'ddj-01', chapter: 1, themes: ['путь', 'молчание'], text: 'Названное имя — ещё не то имя, которое длится вечно.' },
+      { id: 'ddj-02', chapter: 2, themes: ['равновесие'], text: 'Все узнали, что прекрасно, — и рядом явилось безобразное.' },
+      { id: 'ddj-04', chapter: 4, themes: ['путь', 'пустота'], text: 'Путь пуст, но в действии он неисчерпаем.' },
+      { id: 'ddj-05', chapter: 5, themes: ['мера', 'молчание'], text: 'Многословье исчерпывает себя; лучше держаться середины.' },
+      { id: 'ddj-07', chapter: 7, themes: ['мягкость', 'покой'], text: 'Мудрый держится позади — и потому оказывается впереди.' },
+      { id: 'ddj-08', chapter: 8, themes: ['мягкость', 'покой'], text: 'Вода приносит пользу всему и не борется; она там, где никто не хочет быть.' },
+      { id: 'ddj-09', chapter: 9, themes: ['мера'], text: 'Наполнять до краёв хуже, чем остановиться вовремя.' },
+      { id: 'ddj-11', chapter: 11, themes: ['пустота', 'равновесие'], text: 'Из глины лепят сосуд, а пользу ему даёт пустота внутри.' },
+      { id: 'ddj-12', chapter: 12, themes: ['мера'], text: 'Пять цветов туманят взгляд, пять звуков глушат слух.' },
+      { id: 'ddj-13', chapter: 13, themes: ['покой', 'мера'], text: 'Слава и позор равно тревожат; береги себя, как большую беду.' },
+      { id: 'ddj-14', chapter: 14, themes: ['путь', 'молчание'], text: 'Смотришь — не видишь; слушаешь — не слышишь; и всё же это единое.' },
+      { id: 'ddj-15', chapter: 15, themes: ['покой', 'мера'], text: 'Умевший идти путём был осторожен, как идущий по льду зимой.' },
+      { id: 'ddj-16', chapter: 16, themes: ['пустота', 'покой'], text: 'Дойди до предела пустоты и твёрдо храни покой.' },
+      { id: 'ddj-17', chapter: 17, themes: ['мягкость', 'мера'], text: 'Лучший правитель тот, о котором знают лишь, что он есть.' },
+      { id: 'ddj-19', chapter: 19, themes: ['простота', 'мера'], text: 'Покажи простоту, держись искренности — и меньше будет забот.' },
+      { id: 'ddj-20', chapter: 20, themes: ['простота', 'покой'], text: 'Я один отличаюсь от всех: ценю то, что питает изнутри.' },
+      { id: 'ddj-22', chapter: 22, themes: ['мягкость', 'равновесие'], text: 'Согнутое уцелеет, кривое выпрямится, пустое наполнится.' },
+      { id: 'ddj-23', chapter: 23, themes: ['молчание', 'равновесие'], text: 'Редкие слова естественны: ливень не идёт весь день.' },
+      { id: 'ddj-24', chapter: 24, themes: ['мера', 'покой'], text: 'Кто стоит на цыпочках, тот не устоит; кто спешит, тот не дойдёт.' },
+      { id: 'ddj-25', chapter: 25, themes: ['путь', 'равновесие'], text: 'Человек следует земле, земля — небу, небо — Пути, а Путь — самому себе.' },
+      { id: 'ddj-26', chapter: 26, themes: ['покой', 'мера'], text: 'Тяжёлое держит лёгкое, покой повелевает суетой.' },
+      { id: 'ddj-27', chapter: 27, themes: ['мастерство', 'мягкость'], text: 'Умеющий ходить не оставляет следа; умеющий говорить не делает ошибок.' },
+      { id: 'ddj-28', chapter: 28, themes: ['равновесие', 'мягкость'], text: 'Зная свет, оставайся в тени — и станешь мерой для всех.' },
+      { id: 'ddj-29', chapter: 29, themes: ['мера', 'мягкость'], text: 'Мир — тонкий сосуд: кто лезет в него силой, тот его разобьёт.' },
+      { id: 'ddj-30', chapter: 30, themes: ['мера', 'равновесие'], text: 'Где прошло войско, там растут колючки; за силой всегда идёт распад.' },
+      { id: 'ddj-32', chapter: 32, themes: ['путь', 'мера'], text: 'Безымянное проще любого имени; где есть имя, там нужна и мера.' },
+      { id: 'ddj-33a', chapter: 33, themes: ['мудрость', 'мера'], text: 'Знающий других мудр; знающий себя просветлён.' },
+      { id: 'ddj-33b', chapter: 33, themes: ['мудрость', 'мера'], text: 'Кто побеждает себя, тот силён; кто умеет довольствоваться, тот богат.' },
+      { id: 'ddj-34', chapter: 34, themes: ['путь', 'мягкость'], text: 'Путь разлит повсюду: он растит всё и не называет себя хозяином.' },
+      { id: 'ddj-36', chapter: 36, themes: ['мягкость', 'равновесие'], text: 'Прежде чем сжать, растягивают; прежде чем отобрать, дают.' },
+      { id: 'ddj-37', chapter: 37, themes: ['покой', 'мягкость'], text: 'Путь не делает усилий, и потому нет того, чего бы он не сделал.' },
+      { id: 'ddj-40', chapter: 40, themes: ['путь', 'мягкость'], text: 'Возвращение — движение Пути; мягкость — его действие.' },
+      { id: 'ddj-41', chapter: 41, themes: ['путь', 'молчание'], text: 'Великий звук трудно услышать, великий образ не имеет формы.' },
+      { id: 'ddj-43', chapter: 43, themes: ['мягкость', 'пустота'], text: 'Мягкое побеждает твёрдое, а незримое входит туда, где нет щели.' },
+      { id: 'ddj-44', chapter: 44, themes: ['мера', 'мудрость'], text: 'Что дороже — имя или сама жизнь? Кто много копит, тот много теряет.' },
+      { id: 'ddj-45', chapter: 45, themes: ['равновесие', 'мудрость'], text: 'Совершенное кажется неполным, полное кажется пустым.' },
+      { id: 'ddj-46', chapter: 46, themes: ['мера'], text: 'Нет большей беды, чем не знать границы, и большего несчастья, чем алчность.' },
+      { id: 'ddj-47', chapter: 47, themes: ['покой', 'мудрость'], text: 'Не выходя за ворота, знают мир; не выглядывая в окно, видят путь неба.' },
+      { id: 'ddj-48', chapter: 48, themes: ['простота', 'путь'], text: 'В учении каждый день прибавляют, на Пути каждый день убавляют.' },
+      { id: 'ddj-49', chapter: 49, themes: ['мягкость', 'мудрость'], text: 'У мудрого нет своего сердца: сердцем народа он делает своё.' },
+      { id: 'ddj-52', chapter: 52, themes: ['покой', 'молчание'], text: 'Закрой двери и затвори окна — и не исчерпаешь себя до конца дней.' },
+      { id: 'ddj-54', chapter: 54, themes: ['мастерство', 'покой'], text: 'Хорошо построенное не разрушить; кто держит, тот не потеряет.' },
+      { id: 'ddj-56', chapter: 56, themes: ['молчание', 'мудрость'], text: 'Знающий не говорит, говорящий не знает.' },
+      { id: 'ddj-58', chapter: 58, themes: ['равновесие', 'мудрость'], text: 'Прямое оборачивается изворотливым, добро — недобрым: человек давно сбит с толку.' },
+      { id: 'ddj-59', chapter: 59, themes: ['мера', 'простота'], text: 'В управлении людьми и служении небу нет ничего лучше бережливости.' },
+      { id: 'ddj-60', chapter: 60, themes: ['мера', 'покой'], text: 'Править большой страной — всё равно что жарить мелкую рыбу: не ворочай.' },
+      { id: 'ddj-63', chapter: 63, themes: ['мастерство', 'мера'], text: 'Трудное в мире начинается с лёгкого, великое — с малого.' },
+      { id: 'ddj-64a', chapter: 64, themes: ['мастерство', 'покой'], text: 'Путь в тысячу ли начинается с первого шага.' },
+      { id: 'ddj-64b', chapter: 64, themes: ['покой', 'мастерство'], text: 'Кто торопит конец, тот не доведёт и начала.' },
+      { id: 'ddj-66', chapter: 66, themes: ['мягкость', 'мудрость'], text: 'Море властвует над ручьями потому, что умеет быть ниже их.' },
+      { id: 'ddj-67', chapter: 67, themes: ['мягкость', 'простота'], text: 'Три сокровища берегу я: мягкость, бережливость и нежелание быть первым.' },
+      { id: 'ddj-68', chapter: 68, themes: ['мастерство', 'мягкость'], text: 'Хороший воин не гневлив; побеждающий не нападает; умелый правит мягкостью.' },
+      { id: 'ddj-71', chapter: 71, themes: ['мудрость', 'молчание'], text: 'Знать, что не знаешь, — лучше всего; воображать, что знаешь, — болезнь.' },
+      { id: 'ddj-73', chapter: 73, themes: ['мягкость', 'покой'], text: 'Путь неба не борется, а побеждает; не зовёт, а приходит; не торопится, а всё успевает.' },
+      { id: 'ddj-76', chapter: 76, themes: ['мягкость', 'равновесие'], text: 'Всё живое мягко и гибко, всё мёртвое сухо и жёстко.' },
+      { id: 'ddj-77', chapter: 77, themes: ['равновесие', 'мера'], text: 'Путь неба: забирать у излишка и отдавать недостающему.' },
+      { id: 'ddj-78', chapter: 78, themes: ['мягкость', 'мастерство'], text: 'Нет в мире ничего мягче воды, но она стирает камень.' },
+      { id: 'ddj-81', chapter: 81, themes: ['молчание', 'мудрость'], text: 'Правдивые слова некрасивы, красивые слова неправдивы; знающий не доказывает.' },
+    ];
+    
+    function quoteSource(quote) {
+      return `Дао дэ цзин, глава ${quote.chapter} · вольный перевод`;
+    }
+    
+    // ---------------------------------------------------------------------------
+    // Измерение близости смыслов
+    // ---------------------------------------------------------------------------
+    // Три уровня, от грубого к настоящему:
+    // 1. `themeSimilarity` — метки, проставленные вручную. Дёшево, предсказуемо,
+    //    но субъективно и не покрывает оттенки.
+    // 2. `lexicalSimilarity` — грубая лексическая близость: общие корни слов.
+    //    Даёт число без разметки, но ловит только совпадения слов, а не смысла.
+    // 3. Семантическая близость (будущее): векторное представление фразы и косинус
+    //    между векторами. Метрику нужно проверять на размеченной вручную выборке
+    //    пар «близко / далеко» и сравнивать с порядком, который ожидает человек;
+    //    модели должны укладываться в офлайн-размер игры.
+    // Пока адаптивное распределение использует веса давности; близость подключается
+    // параметром `similarity` и коэффициентом `boost` и по умолчанию выключена.
+    
+    const STOP_WORDS = new Set(['и', 'а', 'но', 'не', 'ни', 'как', 'что', 'это', 'то', 'всё', 'все', 'всей', 'для', 'от', 'до', 'за', 'на', 'по', 'из', 'у', 'к', 'с', 'со', 'о', 'об', 'же', 'ли', 'бы', 'он', 'она', 'оно', 'они', 'его', 'её', 'их', 'нет', 'есть', 'там', 'тут', 'так', 'уже', 'ещё', 'вот', 'быть', 'том', 'тем', 'чем', 'при', 'про']);
+    
+    function significantWords(text) {
+      return (text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [])
+        .filter(word => word.length > 2 && !STOP_WORDS.has(word))
+        // Грубая нормализация: общий «корень» первых символов вместо морфологии.
+        .map(word => word.slice(0, 5));
+    }
+    
+    function jaccard(a, b) {
+      if (!a.size || !b.size) return 0;
+      let shared = 0;
+      for (const item of a) if (b.has(item)) shared++;
+      return shared / (a.size + b.size - shared);
+    }
+    
+    function lexicalSimilarity(a, b) {
+      if (a === b) return 1;
+      return jaccard(new Set(significantWords(text(a))), new Set(significantWords(text(b))));
+    }
+    
+    function themeSimilarity(a, b) {
+      if (a === b) return 1;
+      return jaccard(new Set(a?.themes ?? []), new Set(b?.themes ?? []));
+    }
+    
+    function text(value) {
+      return typeof value === 'string' ? value : (value?.text ?? '');
+    }
+    
+    // ---------------------------------------------------------------------------
+    // Адаптивное распределение
+    // ---------------------------------------------------------------------------
+    // Вес цитаты лежит в диапазоне 0..1. Изначально все веса равны 1 — распределение
+    // равномерное. После выбора веса восстанавливаются наполовину (расстояние до 1
+    // делится пополам), а выбранная цитата обнуляется: предыдущая показанная получает
+    // 0,5, та, что перед ней, — 0,75 и так далее. Так недавно показанные цитаты
+    // уступают место остальным и постепенно возвращают вероятность.
+    
+    // Доля пути, которую вес проходит за одно обращение к коллекции. 0,5 — половина
+    // расстояния до единицы: предыдущая цитата получает 0,5, следующая за ней 0,75.
+    const DEFAULT_RECOVERY = 0.5;
+    const DEFAULT_MEMORY = 12;
+    
+    function recoverWeights(weights, recovery = DEFAULT_RECOVERY) {
+      const step = Math.min(Math.max(recovery, 0), 1);
+      return weights.map(weight => {
+        const value = Math.min(Math.max(weight, 0), 1);
+        return value + (1 - value) * step;
+      });
+    }
+    
+    function nextWeights(weights, index, recovery = DEFAULT_RECOVERY) {
+      const recovered = recoverWeights(weights, recovery);
+      if (index >= 0 && index < recovered.length) recovered[index] = 0;
+      return recovered;
+    }
+    
+    function weightedPick(weights, random = Math.random) {
+      const total = weights.reduce((sum, weight) => sum + Math.max(weight, 0), 0);
+      // Если все веса обнулились (например, цитата одна), выбор снова равномерный.
+      if (!(total > 0)) return Math.floor(random() * weights.length) % Math.max(weights.length, 1);
+      let ticket = random() * total;
+      for (let i = 0; i < weights.length; i++) {
+        ticket -= Math.max(weights[i], 0);
+        if (ticket < 0) return i;
+      }
+      return weights.length - 1;
+    }
+    
+    function createQuoteSelector({
+      quotes = taoTeChing,
+      random = Math.random,
+      recovery = DEFAULT_RECOVERY,
+      memory = DEFAULT_MEMORY,
+      similarity = null,
+      boost = 0,
+      history = [],
+    } = {}) {
+      if (!quotes.length) throw new RangeError('Коллекция цитат не может быть пустой');
+      let weights = quotes.map(() => 1);
+      let shown = [];
+    
+      const apply = id => {
+        const index = quotes.findIndex(quote => quote.id === id);
+        if (index < 0) return;
+        weights = nextWeights(weights, index, recovery);
+        shown = [...shown, id].slice(-Math.max(memory, 1));
+      };
+      for (const id of history) apply(id);
+    
+      return {
+        get quotes() {
+          return quotes;
+        },
+        get weights() {
+          return [...weights];
+        },
+        get history() {
+          return [...shown];
+        },
+        // Контекст — цитата, показанная ранее, или другая пара для сравнения.
+        // Пока `similarity` не передана, распределение зависит только от давности.
+        pick(context = null) {
+          // Выбор идёт по текущим весам: только что показанная цитата имеет вес 0 и
+          // повториться не может. Восстановление происходит в момент следующего
+          // выбора, поэтому предыдущая цитата получает половинный вес.
+          let blended = weights;
+          if (similarity && boost > 0 && context) {
+            const closeness = quotes.map(quote => Math.min(Math.max(similarity(context, quote), 0), 1));
+            blended = weights.map((weight, i) => weight * (1 + boost * closeness[i]));
+          }
+          const index = weightedPick(blended, random);
+          const quote = quotes[index];
+          weights = nextWeights(weights, index, recovery);
+          shown = [...shown, quote.id].slice(-Math.max(memory, 1));
+          return quote;
+        },
+        reset() {
+          weights = quotes.map(() => 1);
+          shown = [];
+        },
+      };
+    }
+    
+    return { THEMES, taoTeChing, quoteSource, lexicalSimilarity, themeSimilarity, DEFAULT_RECOVERY, DEFAULT_MEMORY, recoverWeights, nextWeights, weightedPick, createQuoteSelector };
+  })();
+  __modules["speech"] = (() => {
+    // Озвучка цитат через системный синтезатор речи (Web Speech API).
+    //
+    // Почему синтез речи, а не готовые аудиодорожки:
+    // · пользователь сможет добавить свой цитатник — текст озвучится без записи;
+    // · размер игры не растёт: десятки минут речи весили бы мегабайтами;
+    // · голос и темп можно выбрать в системе, дорожки пришлось бы перезаписывать.
+    // Что проигрываем: звучание зависит от устройства и браузера, на части платформ
+    // русского голоса нет вовсе. Поэтому озвучка — необязательная настройка, а при
+    // отсутствии синтезатора цитата просто появляется текстом (см. `supported`).
+    
+    function createSpeechController({
+      synth = globalThis.speechSynthesis,
+      Utterance = globalThis.SpeechSynthesisUtterance,
+      locale = 'ru-RU',
+      rate = 0.95,
+      pitch = 1,
+      volume = 1,
+    } = {}) {
+      let voices = [];
+      let listening = false;
+      let speaking = false;
+      let current = null;
+      const listeners = new Set();
+    
+      const refresh = () => {
+        try {
+          voices = typeof synth?.getVoices === 'function' ? [...synth.getVoices()] : [];
+        } catch {
+          voices = [];
+        }
+        return voices;
+      };
+    
+      const listen = () => {
+        if (listening || typeof synth?.addEventListener !== 'function') return;
+        listening = true;
+        try {
+          synth.addEventListener('voiceschanged', () => {
+            refresh();
+            for (const listener of listeners) listener([...voices]);
+          });
+        } catch {
+          listening = false;
+        }
+      };
+    
+      listen();
+      refresh();
+    
+      const shortLocale = locale.split('-')[0].toLowerCase();
+    
+      function preferredVoice() {
+        const list = voices.length ? voices : refresh();
+        return list.find(voice => (voice.lang ?? '').toLowerCase().replace('_', '-') === locale.toLowerCase())
+          ?? list.find(voice => (voice.lang ?? '').toLowerCase().startsWith(shortLocale))
+          ?? null;
+      }
+    
+      function stop() {
+        if (current) {
+          current.onstart = null; current.onend = null; current.onerror = null; current.onboundary = null;
+          current = null;
+        }
+        speaking = false;
+        if (typeof synth?.cancel === 'function') {
+          try {
+            synth.cancel();
+            return true;
+          } catch {
+            return false;
+          }
+        }
+        return false;
+      }
+    
+      return {
+        get supported() {
+          return Boolean(synth && typeof Utterance === 'function');
+        },
+        get speaking() {
+          return speaking;
+        },
+        get locale() {
+          return locale;
+        },
+        voices() {
+          return voices.length ? [...voices] : refresh();
+        },
+        preferredVoice,
+        // Часть браузеров отдаёт границы только по словам, часть — не отдаёт вовсе;
+        // вызывающий код обязан иметь резервный таймер (см. src/reveal.js).
+        speak(text, { onStart, onBoundary, onEnd, onError } = {}) {
+          const phrase = String(text ?? '').trim();
+          if (!phrase || !synth || typeof Utterance !== 'function' || typeof synth.speak !== 'function') return false;
+          stop();
+          let utterance;
+          try {
+            utterance = new Utterance(phrase);
+          } catch {
+            return false;
+          }
+          utterance.lang = locale;
+          const voice = preferredVoice();
+          if (voice) utterance.voice = voice;
+          utterance.rate = rate; utterance.pitch = pitch; utterance.volume = volume;
+          utterance.onstart = () => { speaking = true; onStart?.(); };
+          utterance.onboundary = event => onBoundary?.(Math.max(event?.charIndex ?? 0, 0), event);
+          utterance.onend = () => { speaking = false; current = null; onEnd?.(); };
+          utterance.onerror = event => { speaking = false; current = null; onError?.(event); };
+          current = utterance;
+          speaking = true;
+          try {
+            // Chrome приостанавливает очередь после cancel(); resume есть не везде.
+            if (typeof synth.resume === 'function' && synth.paused) synth.resume();
+            synth.speak(utterance);
+            return true;
+          } catch (error) {
+            speaking = false; current = null;
+            onError?.(error);
+            return false;
+          }
+        },
+        stop,
+      };
+    }
+    
+    return { createSpeechController };
+  })();
+  __modules["reveal"] = (() => {
+    // Пословное появление цитаты. Идея: слова открываются в том же темпе, в каком
+    // их произносит синтезатор. События `boundary` приходят не во всех браузерах и
+    // не для всех голосов, поэтому у каждого слова есть резервное расписание; как
+    // только приходит настоящая граница, оставшиеся слова перепланируются.
+    // При системной настройке уменьшения движения цитата показывается сразу целиком.
+    
+    function splitWords(text) {
+      const tokens = [];
+      const pattern = /\S+/gu;
+      let match;
+      while ((match = pattern.exec(text)) !== null) {
+        tokens.push({ text: match[0], start: match.index, end: match.index + match[0].length });
+      }
+      return tokens;
+    }
+    
+    function estimateDuration(text, charsPerSecond = 15) {
+      const characters = String(text ?? '').trim().length;
+      return Math.max(600, (characters / Math.max(charsPerSecond, 1)) * 1000);
+    }
+    
+    function createQuoteReveal({
+      element,
+      text = '',
+      reducedMotion = false,
+      charsPerSecond = 15,
+      onProgress = () => {},
+    } = {}) {
+      const tokens = splitWords(String(text ?? ''));
+      const weight = token => token.text.length + 1;
+      const totalWeight = tokens.reduce((sum, token) => sum + weight(token), 0) || 1;
+      let timers = [];
+      let revealed = -1;
+      let words = [];
+      let done;
+      let finished = false;
+    
+      const settle = () => {
+        if (!finished) {
+          finished = true;
+          done?.();
+        }
+      };
+    
+      function clearTimers() {
+        for (const timer of timers) clearTimeout(timer);
+        timers = [];
+      }
+    
+      function render() {
+        element.textContent = '';
+        element.classList.add('is-revealing');
+        words = [];
+        let last = 0;
+        for (const token of tokens) {
+          if (token.start > last) element.append(document.createTextNode(text.slice(last, token.start)));
+          const span = document.createElement('span');
+          span.className = 'quote-word';
+          span.textContent = token.text;
+          element.append(span);
+          words.push(span);
+          last = token.end;
+        }
+        if (last < text.length) element.append(document.createTextNode(text.slice(last)));
+      }
+    
+      function revealThrough(index) {
+        const target = Math.min(index, words.length - 1);
+        if (target <= revealed) return;
+        for (let i = revealed + 1; i <= target; i++) words[i].classList.add('is-visible');
+        revealed = target;
+        onProgress(revealed + 1, tokens.length);
+        if (revealed >= words.length - 1) {
+          clearTimers();
+          element.classList.remove('is-revealing');
+          settle();
+        }
+      }
+    
+      function revealAll() {
+        clearTimers();
+        revealThrough(words.length - 1);
+        element.classList.remove('is-revealing');
+        settle();
+      }
+    
+      function schedule(from, durationMs) {
+        clearTimers();
+        const rest = tokens.slice(from);
+        const restWeight = rest.reduce((sum, token) => sum + weight(token), 0) || 1;
+        let passed = 0;
+        rest.forEach((token, offset) => {
+          passed += weight(token);
+          const at = Math.max(20, (durationMs * passed) / restWeight);
+          timers.push(setTimeout(() => revealThrough(from + offset), at));
+        });
+      }
+    
+      return {
+        tokens,
+        get words() {
+          return [...words];
+        },
+        get finished() {
+          return finished;
+        },
+        start(estimatedDurationMs = estimateDuration(text, charsPerSecond)) {
+          finished = false;
+          revealed = -1;
+          render();
+          if (!words.length || reducedMotion) {
+            revealAll();
+            return this;
+          }
+          schedule(0, estimatedDurationMs);
+          return this;
+        },
+        // Вызывается на событии `boundary`: charIndex — позиция произносимого слова.
+        revealTo(charIndex) {
+          if (finished || !words.length) return;
+          let index = -1;
+          for (let i = 0; i < tokens.length; i++) if (tokens[i].start <= charIndex) index = i;
+          revealThrough(index);
+          if (finished) return;
+          const restWeight = tokens.slice(index + 1).reduce((sum, token) => sum + weight(token), 0);
+          schedule(index + 1, (restWeight / totalWeight) * estimateDuration(text, charsPerSecond));
+        },
+        finish: revealAll,
+        stop: revealAll,
+        whenDone() {
+          if (finished) return Promise.resolve();
+          return new Promise(resolve => {
+            done = resolve;
+          });
+        },
+      };
+    }
+    
+    return { splitWords, estimateDuration, createQuoteReveal };
+  })();
+  __modules["storage"] = (() => {
+    // Обёртка над localStorage. Игра должна работать и там, где хранилище недоступно:
+    // приватный режим, открытый файл в Safari, тесты в Node без DOM, переполненный диск.
+    function createStorage(backend = globalThis.localStorage) {
+      const memory = new Map();
+      let usable = false;
+      try {
+        const probe = '__promezhutok_probe__';
+        backend.setItem(probe, '1');
+        backend.removeItem(probe);
+        usable = true;
+      } catch {
+        usable = false;
+      }
+    
+      return {
+        get available() {
+          return usable;
+        },
+        read(key, fallback = null) {
+          if (memory.has(key)) return memory.get(key);
+          if (!usable) return fallback;
+          try {
+            const raw = backend.getItem(key);
+            return raw === null ? fallback : JSON.parse(raw);
+          } catch {
+            return fallback;
+          }
+        },
+        write(key, value) {
+          memory.set(key, value);
+          if (!usable) return false;
+          try {
+            backend.setItem(key, JSON.stringify(value));
+            return true;
+          } catch {
+            // Хранилище может переполниться уже после проверки: дальше работаем в памяти.
+            usable = false;
+            return false;
+          }
+        },
+        remove(key) {
+          memory.delete(key);
+          if (!usable) return;
+          try {
+            backend.removeItem(key);
+          } catch {
+            usable = false;
+          }
+        },
+      };
+    }
+    
+    return { createStorage };
+  })();
+  __modules["records"] = (() => {
+    // Рекорды партий. Хранятся в браузере игрока; если хранилище недоступно,
+    // рекорды живут только до перезагрузки, а игра не ломается.
+    // Прототип и демонстрация анимации в зачёт не идут: там правила настраиваемые.
+    
+    const { createStorage } = __require("storage");
+    
+    const RECORDS_KEY = 'promezhutok.records.v1';
+    
+    const number = value => (Number.isFinite(value) && value >= 0 ? Math.floor(value) : 0);
+    
+    function sanitize(raw, limit) {
+      const source = raw && typeof raw === 'object' ? raw : {};
+      const top = Array.isArray(source.top) ? source.top : [];
+      const entries = top
+        .filter(entry => entry && typeof entry === 'object')
+        .map(entry => ({
+          score: number(Number(entry.score)),
+          lines: number(Number(entry.lines)),
+          date: typeof entry.date === 'string' ? entry.date : null,
+        }))
+        .filter(entry => entry.score > 0 || entry.lines > 0)
+        .sort((a, b) => b.score - a.score || b.lines - a.lines)
+        .slice(0, limit);
+      return {
+        bestScore: Math.max(number(Number(source.bestScore)), entries[0]?.score ?? 0, 0),
+        bestLines: Math.max(number(Number(source.bestLines)), ...entries.map(entry => entry.lines), 0),
+        games: number(Number(source.games)),
+        updatedAt: typeof source.updatedAt === 'string' ? source.updatedAt : null,
+        top: entries,
+      };
+    }
+    
+    function createRecordStore({
+      storage = createStorage(),
+      key = RECORDS_KEY,
+      now = () => new Date().toISOString(),
+      limit = 5,
+    } = {}) {
+      let state = sanitize(storage.read(key, null), limit);
+    
+      const persist = () => {
+        state.updatedAt = now();
+        storage.write(key, state);
+        return state;
+      };
+    
+      return {
+        get available() {
+          return storage.available;
+        },
+        get state() {
+          return { ...state, top: state.top.map(entry => ({ ...entry })) };
+        },
+        // Возвращает, побит ли рекорд, и место результата в списке лучших.
+        submit({ score = 0, lines = 0 } = {}) {
+          const entry = { score: number(score), lines: number(lines) };
+          if (entry.score === 0 && entry.lines === 0) return { record: false, rank: null, state: this.state };
+          const record = entry.score > state.bestScore || entry.lines > state.bestLines;
+          entry.date = now();
+          state.games += 1;
+          state.bestScore = Math.max(state.bestScore, entry.score);
+          state.bestLines = Math.max(state.bestLines, entry.lines);
+          const entries = [...state.top, entry].sort((a, b) => b.score - a.score || b.lines - a.lines);
+          const place = entries.indexOf(entry);
+          state.top = entries.slice(0, limit);
+          persist();
+          return { record, rank: place >= 0 && place < limit ? place + 1 : null, state: this.state };
+        },
+        clear() {
+          state = { bestScore: 0, bestLines: 0, games: 0, updatedAt: null, top: [] };
+          storage.remove(key);
+          return this.state;
+        },
+      };
+    }
+    
+    return { createStorage, RECORDS_KEY, createRecordStore };
+  })();
+  __modules["main"] = (() => {
+    const { BOARD_COLUMNS, BOARD_ROWS, addRow, canGenerate, canMove, connectedIds, isMoveGameOver, makeRow, moveBlocks, resolveBoard } = __require("board");
+    const { createFullscreenController } = __require("fullscreen");
+    const { dragPosition, snapOffset, hasMove, sweepAxis } = __require("drag");
+    const { collectFallFrames, fallKeyframes } = __require("motion");
+    const { createQuoteSelector, quoteSource, taoTeChing } = __require("quotes");
+    const { createSpeechController } = __require("speech");
+    const { createQuoteReveal, estimateDuration } = __require("reveal");
+    const { createRecordStore } = __require("records");
+    const { createStorage } = __require("storage");
+    
+    const $ = selector => document.querySelector(selector);
+    const boardEl = $('#board'), messageEl = $('#message');
+    const strips = { top: $('#next-top'), bottom: $('#next-bottom') };
+    const bondEl = $('#bond'), directionEl = $('#direction'), autoRowEl = $('#auto-row');
+    const prototype = new URLSearchParams(location.search).get('mode') === 'prototype';
+    document.body.classList.toggle('play-mode', !prototype);
+    if (!prototype) { bondEl.value = 'above'; directionEl.value = 'random'; autoRowEl.checked = true; }
+    $('#mode-link').href = prototype ? location.pathname : '?mode=prototype';
+    $('#mode-link').textContent = prototype ? 'Играть ↗' : 'Прототип ↗';
+    const SETTINGS_KEY = 'promezhutok.settings.v1';
+    const QUOTES_KEY = 'promezhutok.quotes.v1';
+    const settingsStorage = createStorage();
+    const quotesCheckbox = $('#quotes'), voiceCheckbox = $('#voice');
+    const quoteCard = $('#quote'), quoteVoiceButton = $('#quote-voice');
+    // Веса цитат восстанавливаются из истории: показанное недавно не повторяется и
+    // между сессиями. random читается при каждом вызове, чтобы генерация ряда и
+    // выбор цитаты оставались одинаково управляемыми в тестах.
+    const quoteSelector = createQuoteSelector({
+      quotes: taoTeChing,
+      random: () => Math.random(),
+      history: settingsStorage.read(QUOTES_KEY, {})?.history ?? [],
+    });
+    const speech = createSpeechController();
+    const records = createRecordStore({ storage: settingsStorage });
+    // В прототипе правила и поле настраиваются, поэтому рекорды пишет только игра.
+    const recordsEnabled = !prototype;
+    let lastQuote = null, activeReveal = null;
+    
+    function loadSettings() {
+      const saved = settingsStorage.read(SETTINGS_KEY, {});
+      if (!saved || typeof saved !== 'object') return;
+      if (typeof saved.quotes === 'boolean') quotesCheckbox.checked = saved.quotes;
+      if (typeof saved.voice === 'boolean') voiceCheckbox.checked = saved.voice;
+    }
+    function saveSettings() {
+      settingsStorage.write(SETTINGS_KEY, { quotes: quotesCheckbox.checked, voice: voiceCheckbox.checked });
+    }
+    function plural(count, one, few, many) {
+      const mod10 = count % 10, mod100 = count % 100;
+      if (mod10 === 1 && mod100 !== 11) return one;
+      if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return few;
+      return many;
+    }
+    function hideQuote() {
+      activeReveal?.stop(); activeReveal = null;
+      speech.stop();
+      quoteCard.hidden = true;
+      quoteVoiceButton.textContent = '▶ Озвучить';
+    }
+    function presentQuote(quote) {
+      lastQuote = quote;
+      $('#quote-source').textContent = quoteSource(quote);
+      activeReveal?.stop();
+      const reveal = createQuoteReveal({ element: $('#quote-text'), text: quote.text, reducedMotion: reducedMotion() });
+      activeReveal = reveal;
+      quoteCard.hidden = false;
+      reveal.start(estimateDuration(quote.text));
+      if (voiceCheckbox.checked) speakQuote(quote);
+      else { quoteVoiceButton.hidden = !speech.supported; quoteVoiceButton.textContent = '▶ Озвучить'; }
+    }
+    function speakQuote(quote) {
+      const started = speech.speak(quote.text, {
+        // Слова открываются по мере произнесения; если границ нет, сработает
+        // резервное расписание самого reveal.
+        onBoundary: index => activeReveal?.revealTo(index),
+        onEnd: () => { activeReveal?.finish(); quoteVoiceButton.textContent = '▶ Озвучить'; },
+        onError: () => { activeReveal?.finish(); quoteVoiceButton.textContent = '▶ Озвучить'; },
+      });
+      quoteVoiceButton.hidden = !speech.supported;
+      if (started) quoteVoiceButton.textContent = '■ Остановить';
+      return started;
+    }
+    function showQuote() {
+      if (!quotesCheckbox.checked) return;
+      const quote = quoteSelector.pick(lastQuote);
+      settingsStorage.write(QUOTES_KEY, { history: quoteSelector.history });
+      presentQuote(quote);
+    }
+    function geometry() {
+      const style = getComputedStyle(boardEl), rect = boardEl.getBoundingClientRect();
+      const w = rect.width / BOARD_COLUMNS || 50, h = rect.height / BOARD_ROWS || 50;
+      return { height: (parseFloat(style.getPropertyValue('--stud-height')) || 6) / h,
+        maxWidth: (parseFloat(style.getPropertyValue('--stud-max-width')) || 16) / w,
+        inset: (parseFloat(style.getPropertyValue('--brick-inset')) || 3) / w };
+    }
+    let blocks, next, nextId, score, lines, selection, gameOver, pointer;
+    let busy = false, epoch = 0, clearRows = [];
+    // Итог одного хода игрока: линии считаются и до, и после появления нового ряда.
+    // Иначе «одна линия до и одна после» давало два отдельных результата по одной
+    // линии, и цитата за ход не появлялась.
+    let turn = { lines: 0, combo: 0, score: 0, quoteShown: false };
+    function startTurn() {
+      turn = { lines: 0, combo: 0, score: 0, quoteShown: false };
+    }
+    function accountResolution(result) {
+      if (!result) return false;
+      turn.lines += result.lines;
+      turn.combo = Math.max(turn.combo, result.combo);
+      turn.score += result.score;
+      if (turn.quoteShown) return false;
+      if (turn.lines > 1 || turn.combo > 1) {
+        turn.quoteShown = true;
+        return true;
+      }
+      return false;
+    }
+    const lengthInputs = [...document.querySelectorAll('.length-options input')];
+    const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const reducedMotion = () => motionPreference.matches;
+    const pause = (ms, always = false) => new Promise(resolve => setTimeout(resolve, reducedMotion() && !always ? 0 : ms));
+    // Timers can run ahead of animations when a frame is delayed or a tab is hidden.
+    const waitAnimations = (animations, fallback) => animations.length
+      ? Promise.allSettled(animations.map(animation => animation.finished)) : pause(fallback);
+    const allowedLengths = () => lengthInputs.filter(input => input.checked).map(input => Number(input.value));
+    function makeNext(direction = directionEl.value === 'random' ? (Math.random() < 0.5 ? 'top' : 'bottom') : directionEl.value) {
+      return { row: makeRow(Math.random, allowedLengths()), direction };
+    }
+    
+    function say(text, error = false) {
+      messageEl.textContent = text;
+      messageEl.classList.toggle('error', error);
+    }
+    function newGame() {
+      epoch++; busy = false; clearRows = []; boardEl.classList.remove('is-burning');
+      blocks = []; nextId = 1; score = 0; lines = 0; selection = null; gameOver = false; pointer = null;
+      startTurn(); hideQuote(); renderRecords();
+      next = makeNext();
+      generate(true);
+    }
+    function checkGameOver({ afterMove = false, wasFullHeight = false } = {}) {
+      const blocked = !canGenerate(blocks, next.direction);
+      const wasOver = gameOver;
+      gameOver = (afterMove && isMoveGameOver(blocks, wasFullHeight, autoRowEl.checked)) || (blocked && !hasMove(blocks, bondEl.value, geometry()));
+      if (!gameOver) return;
+      if (wasOver) { say(`Игра окончена. Счёт: ${score}. Начните заново, чтобы попробовать ещё раз.`, true); return; }
+      const outcome = recordsEnabled ? records.submit({ score, lines }) : { record: false };
+      renderRecords();
+      say(outcome.record
+        ? `Новый рекорд: ${score} очков, ${lines} ${plural(lines, 'линия', 'линии', 'линий')}. Начните заново, чтобы попробовать ещё раз.`
+        : `Игра окончена. Счёт: ${score}. Начните заново, чтобы попробовать ещё раз.`, true);
+    }
+    function renderRecords() {
+      const { bestScore, bestLines, top } = records.state;
+      $('#best-score').textContent = bestScore;
+      $('#best-lines').textContent = bestLines;
+      const list = $('#record-list');
+      list.replaceChildren();
+      if (!top.length) {
+        const empty = document.createElement('li');
+        empty.className = 'record-empty';
+        empty.textContent = recordsEnabled ? 'Пока нет завершённых партий' : 'Рекорды пишутся только в игре';
+        list.append(empty);
+        return;
+      }
+      top.forEach((entry, index) => {
+        const item = document.createElement('li');
+        const place = document.createElement('span'); place.className = 'record-place'; place.textContent = `${index + 1}.`;
+        const value = document.createElement('span'); value.className = 'record-score'; value.textContent = entry.score;
+        const extra = document.createElement('span'); extra.className = 'record-lines'; extra.textContent = `${entry.lines} ${plural(entry.lines, 'линия', 'линии', 'линий')}`;
+        if (entry.date) item.title = new Date(entry.date).toLocaleString('ru-RU');
+        item.append(place, value, extra);
+        list.append(item);
+      });
+    }
+    async function animateResolution(initialMessage, { fromGhost = false, afterMove = false, wasFullHeight = false } = {}) {
+      const action = ++epoch;
+      busy = true;
+      const baseScore = score, baseLines = lines;
+      const result = resolveBoard(blocks, { trace: true });
+      say(initialMessage); render({ fromGhost });
+      await pause(240);
+      if (action !== epoch) return false;
+      for (let i = 0; i < result.frames.length; i++) {
+        const frame = result.frames[i];
+        if (frame.type === 'fall') {
+          // Replay all consecutive gravity steps as one continuous linear animation.
+          // Each brick has its own keyframes, so earlier landings stay synchronized.
+          const { positions, nextIndex } = collectFallFrames(result.frames, i, blocks);
+          i = nextIndex - 1;
+          blocks = positions.at(-1); clearRows = [];
+          say('Конструкции падают одновременно.');
+          const duration = (positions.length - 1) * (1000 / Number($('#fall-speed').value));
+          const animations = render({ fallFrames: positions, duration });
+          await waitAnimations(animations, duration);
+        } else {
+          blocks = frame.blocks; clearRows = frame.rows;
+          score = baseScore + frame.score; lines = baseLines + frame.lines;
+          if (frame.type === 'clear') say(`Линия заполнена! ${frame.combo > 1 ? `Комбо ×${frame.combo}` : 'Освобождаем пространство.'}`);
+          boardEl.classList.remove('is-burning');
+          render();
+          if (frame.type === 'clear') {
+            // First let the player recognise the completed row, then start the burn.
+            await pause(reducedMotion() ? 200 : 400, true);
+            if (action !== epoch) return false;
+            const duration = Number($('#burn-duration').value) * 1000;
+            boardEl.style.setProperty('--burn-duration', `${duration}ms`);
+            boardEl.classList.add('is-burning');
+            if (reducedMotion()) await pause(500, true);
+            else {
+              const animations = [...boardEl.querySelectorAll('.burn-line, .clearing .brick-inner')]
+                .flatMap(el => el.getAnimations ? el.getAnimations() : []);
+              await waitAnimations(animations, duration);
+            }
+          } else await pause(120);
+        }
+        if (action !== epoch) return false;
+      }
+      boardEl.classList.remove('is-burning');
+      blocks = result.blocks; clearRows = []; score = baseScore + result.score; lines = baseLines + result.lines;
+      busy = false;
+      const quote = accountResolution(result);
+      if (result.lines) {
+        // Когда за ход волн было несколько, сообщение показывает итог хода целиком.
+        say(turn.lines > result.lines
+          ? `За ход: ${turn.lines} ${plural(turn.lines, 'линия', 'линии', 'линий')} · +${turn.score} очков`
+          : `Линии: ${result.lines} · +${result.score} очков${result.combo > 1 ? ` · комбо ×${result.combo}` : ''}`);
+      } else say(initialMessage);
+      if (quote) showQuote();
+      checkGameOver({ afterMove, wasFullHeight }); render();
+      // Empty fields are unplayable: refill once in both modes, including after a
+      // generation-triggered cascade. Signal place() to avoid a second auto row.
+      if (!gameOver && blocks.length === 0) {
+        generate(false, 'Поле очищено. Добавлен новый ряд.');
+        return { refilled: true };
+      }
+      return { refilled: false };
+    }
+    function generate(initial = false, message = '') {
+      if (gameOver || busy) return;
+      if (selection) { say('Сначала разместите конструкцию или отмените ход.', true); return; }
+      const added = addRow(blocks, next.row, next.direction, nextId);
+      if (!added) { checkGameOver(); if (!gameOver) say('Нет места для нового ряда. Освободите верх поля.', true); render(); return; }
+      blocks = added; nextId += next.row.length; next = makeNext();
+      animateResolution(initial ? 'Выберите блок, чтобы начать движение.' : (message || 'Новый ряд добавлен. Выберите блок.'));
+    }
+    function select(id) {
+      if (gameOver || busy) return;
+      selection = { ids: connectedIds(blocks, id, bondEl.value), dx: 0, dy: 0, visual: null };
+      say('Разъедините выступы и переместите конструкцию.');
+      render();
+    }
+    function step(dx, dy) {
+      if (!selection || gameOver || busy) return false;
+      const x = selection.dx + dx, y = selection.dy + dy;
+      const studs = geometry(), pos = { x: selection.dx, y: selection.dy };
+      const axis = dx ? 'x' : 'y';
+      const reached = sweepAxis(blocks, selection.ids, pos, axis, axis === 'x' ? x : y, studs);
+      const engaged = !dx && Math.abs(reached - y) <= studs.height + 1e-7 && Math.abs(sweepAxis(blocks, selection.ids, pos, axis, y, studs, true) - y) < 1e-7;
+      if ((!engaged && Math.abs(reached - (dx ? x : y)) > 1e-7) || !canMove(blocks, selection.ids, x, y)) { say('Здесь мешают край поля или другой блок.', true); flashInvalid(); return false; }
+      selection.dx = x; selection.dy = y; selection.visual = null;
+      say('Серый призрак показывает положение. Отпустите или нажмите «Разместить».'); render();
+      return true;
+    }
+    function flashInvalid() {
+      boardEl.classList.remove('invalid'); void boardEl.offsetWidth; boardEl.classList.add('invalid');
+    }
+    async function place() {
+      if (!selection || busy) return;
+      if (!selection.dx && !selection.dy) { selection = null; say('Ход отменён.'); render(); return; }
+      const wasFullHeight = !canGenerate(blocks, next.direction);
+      blocks = moveBlocks(blocks, selection.ids, selection.dx, selection.dy);
+      selection = null;
+      startTurn();
+      const completed = await animateResolution('Конструкция размещена.', { fromGhost: true, afterMove: true, wasFullHeight });
+      if (completed && !completed.refilled && autoRowEl.checked && !gameOver) generate();
+    }
+    function cancel() { selection = null; say('Ход отменён. Выберите блок.'); render(); }
+    function position(element, block, dx = 0, dy = 0) {
+      element.style.left = `${(block.x + dx) / BOARD_COLUMNS * 100}%`;
+      element.style.top = `${(block.y + dy) / BOARD_ROWS * 100}%`;
+      element.style.width = `${block.length / BOARD_COLUMNS * 100}%`;
+      element.style.height = `${100 / BOARD_ROWS}%`;
+    }
+    function brick(block, ghost = false) {
+      const el = document.createElement(ghost ? 'div' : 'button');
+      el.dataset.id = String(block.id);
+      if (!ghost) { el.type = 'button'; el.setAttribute('aria-label', `Блок длиной ${block.length}, ряд ${block.y + 1}, столбец ${block.x + 1}`); }
+      else el.setAttribute('aria-hidden', 'true');
+      el.className = `brick ${ghost ? 'ghost' : `color-${block.id % 4}`}`;
+      el.style.zIndex = ghost ? '50' : String(block.y + 1);
+      if (!ghost && selection?.ids.has(block.id)) el.classList.add('selected');
+      if (!ghost && clearRows.includes(block.y)) el.classList.add('clearing');
+      const inside = document.createElement('span'); inside.className = 'brick-inner'; inside.style.setProperty('--brick-length', block.length);
+      for (let i = 0; i < block.length; i++) { const stud = document.createElement('i'); stud.className = 'stud'; inside.append(stud); }
+      el.append(inside); position(el, block, ghost ? (selection.visual?.x ?? selection.dx) : 0, ghost ? (selection.visual?.y ?? selection.dy) : 0);
+      return el;
+    }
+    function render({ fromGhost = false, fallFrames = null, duration = 220 } = {}) {
+      const animations = [];
+      const focusedId = boardEl.contains(document.activeElement) ? document.activeElement.dataset.id : null;
+      const oldPositions = new Map([...boardEl.querySelectorAll('button.brick')].map(el => [el.dataset.id, el.getBoundingClientRect()]));
+      const oldGhosts = new Map([...boardEl.querySelectorAll('.ghost')].map(el => [el.dataset.id, el.getBoundingClientRect()]));
+      boardEl.replaceChildren();
+      // Decorative background cells are hidden from assistive technology; brick buttons are labelled individually.
+      const grid = document.createElement('div'); grid.className = 'grid-bg'; grid.setAttribute('aria-hidden', 'true');
+      for (let i = 0; i < BOARD_ROWS * BOARD_COLUMNS; i++) { const cell = document.createElement('div'); cell.className = `cell${clearRows.includes(Math.floor(i / BOARD_COLUMNS)) ? ' clear-cell' : ''}`; grid.append(cell); }
+      boardEl.append(grid);
+      for (const y of clearRows) { const flame = document.createElement('div'); flame.className = 'burn-line'; flame.setAttribute('aria-hidden', 'true'); flame.style.top = `${y / BOARD_ROWS * 100}%`; flame.style.height = `${100 / BOARD_ROWS}%`; boardEl.append(flame); }
+      for (const block of blocks) boardEl.append(brick(block));
+      if (selection) for (const block of blocks.filter(b => selection.ids.has(b.id))) boardEl.append(brick(block, true));
+      if (focusedId) boardEl.querySelector(`button[data-id="${focusedId}"]`)?.focus({ preventScroll: true });
+      // Animate from the previous visual position, not from the original cell when dropping a ghost.
+      if (fallFrames || !reducedMotion()) {
+        const cellHeight = boardEl.clientHeight / BOARD_ROWS;
+        for (const el of boardEl.querySelectorAll('button.brick')) {
+          const id = Number(el.dataset.id), now = el.getBoundingClientRect();
+          if (fallFrames) {
+            const keyframes = fallKeyframes(fallFrames, id, cellHeight);
+            if (keyframes.length) animations.push(el.animate(keyframes, { duration, easing: 'linear' }));
+          } else {
+            const old = (fromGhost && oldGhosts.get(el.dataset.id)) || oldPositions.get(el.dataset.id);
+            if (old && (old.left !== now.left || old.top !== now.top)) el.animate([{ transform: `translate(${old.left - now.left}px, ${old.top - now.top}px)` }, { transform: 'translate(0, 0)' }], { duration, easing: 'ease-out' });
+          }
+        }
+        // Arrow-button moves retain a short smooth transition. Dragging updates ghosts directly.
+        for (const el of boardEl.querySelectorAll('.ghost')) {
+          const old = oldGhosts.get(el.dataset.id), now = el.getBoundingClientRect();
+          if (old && (old.left !== now.left || old.top !== now.top)) el.animate([{ transform: `translate(${old.left - now.left}px, ${old.top - now.top}px)` }, { transform: 'translate(0, 0)' }], { duration: 160, easing: 'ease-out' });
+        }
+      }
+      for (const [direction, strip] of Object.entries(strips)) {
+        const active = next.direction === direction;
+        strip.classList.toggle('active', active);
+        strip.replaceChildren();
+        for (let x = 0; x < BOARD_COLUMNS; x++) {
+          const slot = document.createElement('div'); slot.className = 'preview-slot'; strip.append(slot);
+        }
+        if (active) for (const piece of next.row) {
+          const mini = document.createElement('div'); mini.className = 'preview-brick';
+          mini.style.left = `${piece.x / BOARD_COLUMNS * 100}%`;
+          mini.style.width = `${piece.length / BOARD_COLUMNS * 100}%`;
+          strip.append(mini);
+        }
+        const side = direction === 'top' ? 'сверху' : 'снизу';
+        strip.setAttribute('aria-label', active
+          ? `Следующий ряд ${side}: ${next.row.map(b => `блок ${b.length} с позиции ${b.x + 1}`).join(', ')}, остальные клетки пусты`
+          : `Следующий ряд ${side} не появится`);
+      }
+      $('#next-direction').textContent = `Следующий ряд — ${next.direction === 'top' ? 'сверху ↓' : 'снизу ↑'}`;
+      $('#score').textContent = score; $('#lines').textContent = `ЛИНИЙ: ${lines}`;
+      const best = records.state.bestScore;
+      $('#score-record').textContent = Math.max(best, score);
+      $('.score').classList.toggle('is-record', score > best && score > 0);
+      $('#board-status').textContent = gameOver ? 'ИГРА ОКОНЧЕНА' : busy ? 'ДВИЖЕНИЕ' : selection ? 'КОНСТРУКЦИЯ ВЫБРАНА' : 'ВЫБЕРИТЕ БЛОК';
+      $('.move-controls').classList.toggle('active', !!selection && !busy);
+      $('#generate').disabled = gameOver || !!selection || busy;
+      document.querySelectorAll('#place, #cancel').forEach(el => el.disabled = !selection || gameOver || busy);
+      [bondEl, directionEl, autoRowEl, $('#stud-style'), $('#fall-speed'), $('#burn-duration'), $('#animation-demo'), ...lengthInputs].forEach(el => el.disabled = busy);
+      if (!busy && allowedLengths().length === 1) lengthInputs.find(input => input.checked).disabled = true;
+      return animations;
+    }
+    boardEl.addEventListener('pointerdown', event => {
+      const target = event.target.closest('button[data-id]');
+      if (!target || event.button !== 0) return;
+      event.preventDefault();
+      select(Number(target.dataset.id));
+      pointer = { x: event.clientX, y: event.clientY, moved: false, id: event.pointerId };
+    });
+    window.addEventListener('pointermove', event => {
+      if (!pointer || event.pointerId !== pointer.id || !selection) return;
+      const rect = boardEl.getBoundingClientRect(), unitX = rect.width / BOARD_COLUMNS, unitY = rect.height / BOARD_ROWS;
+      if (!unitX || !unitY) return;
+      const target = { x: (event.clientX - pointer.x) / unitX, y: (event.clientY - pointer.y) / unitY };
+      const studs = geometry();
+      const current = selection.visual ?? { x: selection.dx, y: selection.dy };
+      const visual = dragPosition(blocks, selection.ids, current, target, studs);
+      selection.visual = visual;
+      if (Math.abs(visual.x) > 0.01 || Math.abs(visual.y) > 0.01) pointer.moved = true;
+      for (const el of boardEl.querySelectorAll('.ghost')) {
+        const block = blocks.find(b => b.id === Number(el.dataset.id));
+        if (block) position(el, block, visual.x, visual.y);
+      }
+      if (pointer.moved) say('Серый призрак показывает положение. Отпустите или нажмите «Разместить».');
+    });
+    window.addEventListener('pointerup', event => {
+      if (pointer && event.pointerId === pointer.id) {
+        const moved = pointer.moved; pointer = null;
+        if (moved && selection) {
+          const snapped = snapOffset(blocks, selection.ids, selection.visual, geometry());
+          if (snapped) { selection.dx = snapped.x; selection.dy = snapped.y; place(); }
+          else { selection.visual = null; say('Не удалось разместить конструкцию. Попробуйте другое положение.', true); render(); }
+        } else if (selection) render();
+      }
+    });
+    window.addEventListener('pointercancel', () => { if (pointer) { pointer = null; cancel(); } });
+    // Keyboard activation for brick buttons (pointer selection is handled separately).
+    boardEl.addEventListener('click', event => { const target = event.target.closest('button[data-id]'); if (target && event.detail === 0) select(Number(target.dataset.id)); });
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && fullscreen.exitFallback()) return;
+      if (!selection || ['SELECT', 'INPUT'].includes(document.activeElement.tagName)) return;
+      const delta = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[event.key];
+      if (delta) { event.preventDefault(); step(...delta); }
+      else if (event.key === 'Escape') cancel();
+    });
+    $('#place').addEventListener('click', place); $('#cancel').addEventListener('click', cancel); $('#generate').addEventListener('click', () => { startTurn(); generate(); }); $('#reset').addEventListener('click', newGame);
+    bondEl.addEventListener('change', () => { if (selection) selection = null; $('#bond-hint').textContent = bondEl.value === 'all' ? 'При подъёме движутся все связанные блоки, в том числе снизу.' : 'Выбранный блок отделяется от нижних и забирает связанные блоки выше.'; say('Режим сцепления изменён. Выберите блок.'); checkGameOver(); render(); });
+    directionEl.addEventListener('change', () => { $('#generation-hint').textContent = directionEl.value === 'bottom' ? 'Ряд появится снизу и поднимет поле.' : directionEl.value === 'top' ? 'Ряд появится сверху и упадёт вниз.' : 'Направление выбирается для каждого ряда случайно.'; newGame(); });
+    lengthInputs.forEach(input => input.addEventListener('change', () => {
+      if (!allowedLengths().length) { input.checked = true; return; }
+      next = makeNext(next.direction); say('Следующий ряд обновлён с учётом выбранных длин.'); render();
+    }));
+    $('#fall-speed').addEventListener('input', event => { $('#fall-speed-value').textContent = event.target.value; });
+    $('#burn-duration').addEventListener('input', event => { $('#burn-duration-value').textContent = event.target.value; });
+    $('#animation-demo').addEventListener('click', () => {
+      // A reproducible two-wave cascade: reset the current game, then clear, fall,
+      // clear again, and refill. The normal resolution path and settings are used.
+      epoch++; busy = false; clearRows = []; boardEl.classList.remove('is-burning');
+      score = 0; lines = 0; selection = null; gameOver = false; pointer = null;
+      startTurn(); hideQuote();
+      const pieces = [
+        [0, 9], [6, 9], [0, 8], [2, 8], [4, 8], [6, 8], [2, 7], [4, 7],
+      ];
+      blocks = pieces.map(([x, y], i) => ({ id: i + 1, x, y, length: 2 }));
+      nextId = blocks.length + 1; next = makeNext();
+      boardEl.replaceChildren(); // Do not animate reused IDs from the previous game.
+      boardEl.scrollIntoView?.({ behavior: 'instant', block: 'center' });
+      animateResolution('Демонстрация: две линии, падение и новое поле.');
+    });
+    quotesCheckbox.addEventListener('change', event => {
+      saveSettings();
+      if (!event.target.checked) hideQuote();
+    });
+    voiceCheckbox.addEventListener('change', () => {
+      saveSettings();
+      if (!voiceCheckbox.checked) {
+        speech.stop();
+        quoteVoiceButton.textContent = '▶ Озвучить';
+      } else if (lastQuote && !quoteCard.hidden) speakQuote(lastQuote);
+    });
+    quoteVoiceButton.addEventListener('click', () => {
+      if (speech.speaking) {
+        speech.stop();
+        activeReveal?.finish();
+        quoteVoiceButton.textContent = '▶ Озвучить';
+        return;
+      }
+      if (lastQuote) speakQuote(lastQuote);
+    });
+    $('#quote-dismiss').addEventListener('click', hideQuote);
+    $('#clear-records').addEventListener('click', event => {
+      const button = event.currentTarget;
+      // Два нажатия вместо всплывающего подтверждения: браузерное окно на телефоне
+      // перекрывает игру, а кнопку легко вернуть в исходное состояние.
+      if (button.dataset.confirm !== 'true') {
+        button.dataset.confirm = 'true';
+        button.textContent = 'Точно очистить рекорды?';
+        setTimeout(() => {
+          if (button.dataset.confirm === 'true') { delete button.dataset.confirm; button.textContent = 'Очистить рекорды'; }
+        }, 4000);
+        return;
+      }
+      delete button.dataset.confirm;
+      button.textContent = 'Очистить рекорды';
+      records.clear();
+      renderRecords();
+      render();
+      say('Рекорды очищены.');
+    });
+    $('#stud-style').addEventListener('change', event => { boardEl.classList.toggle('studs-center', event.target.value === 'center'); });
+    const fullscreenButton = $('#fullscreen');
+    const fullscreen = createFullscreenController(document, state => {
+      document.body.classList.toggle('expanded-mode', state.active);
+      fullscreenButton.setAttribute('aria-pressed', String(state.active));
+      const label = state.fallback ? 'Свернуть расширенный вид' : state.native ? 'Выйти из полного экрана' : 'На весь экран';
+      fullscreenButton.setAttribute('aria-label', label);
+      fullscreenButton.querySelector('.fullscreen-label').textContent = state.active ? 'Свернуть' : 'На весь экран';
+      if (state.fallback) say('Браузер не разрешил полный экран. Открыт расширенный вид внутри окна.');
+    });
+    fullscreenButton.addEventListener('click', () => fullscreen.toggle());
+    
+    loadSettings();
+    quoteVoiceButton.hidden = !speech.supported;
+    if (!speech.supported) {
+      voiceCheckbox.checked = false;
+      voiceCheckbox.disabled = true;
+      const hint = $('#quotes-hint');
+      hint.textContent = 'Цитаты появляются, когда за ход сгорает больше одной линии. Озвучка недоступна: в этом браузере нет синтезатора речи.';
+      // В игровом режиме подсказки скрыты, но про отключённую озвучку сказать нужно.
+      hint.classList.add('is-important');
+    }
+    if (!recordsEnabled) $('#records-hint').textContent = 'В прототипе рекорды не сохраняются: правила настраиваются.';
+    newGame();
+    
+    return { BOARD_COLUMNS, BOARD_ROWS, addRow, canGenerate, canMove, connectedIds, isMoveGameOver, makeRow, moveBlocks, resolveBoard, createFullscreenController, dragPosition, snapOffset, hasMove, sweepAxis, collectFallFrames, fallKeyframes, createQuoteSelector, quoteSource, taoTeChing, createSpeechController, createQuoteReveal, estimateDuration, createRecordStore, createStorage };
+  })();
+})();
+</script>
+</body></html>
