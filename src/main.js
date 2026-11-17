@@ -17,6 +17,8 @@ document.body.classList.toggle('play-mode', !prototype);
 if (!prototype) { bondEl.value = 'above'; directionEl.value = 'random'; autoRowEl.checked = true; }
 $('#mode-link').href = prototype ? location.pathname : '?mode=prototype';
 $('#mode-link').textContent = prototype ? 'Играть ↗' : 'Прототип ↗';
+// Игра открывается по умолчанию; прототип — отдельный адрес с настройками.
+$('#mode-link').title = prototype ? 'Открыть игру без настроек' : 'Открыть прототип с настройками физики';
 const SETTINGS_KEY = 'promezhutok.settings.v1';
 const QUOTES_KEY = 'promezhutok.quotes.v1';
 const settingsStorage = createStorage();
